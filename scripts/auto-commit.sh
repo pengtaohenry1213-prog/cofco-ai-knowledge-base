@@ -40,6 +40,14 @@ get_task_name() {
         step10) echo "集成前端对话页面" ;;
         step11) echo "实现流式输出" ;;
         step12) echo "优化用户体验与性能" ;;
+        step13) echo "实现文档对话核心接口（非流式）" ;;
+        step14) echo "实现文档对话流式接口" ;;
+        step15) echo "实现历史对话管理接口" ;;
+        step16) echo "实现全局异常处理与日志中间件" ;;
+        step17) echo "实现环境变量与配置管理" ;;
+        step18) echo "封装豆包 Embedding API 调用" ;;
+        step19) echo "实现用户问题检索与 Prompt 拼接" ;;
+        step20) echo "封装豆包对话 API 调用" ;;
         *) echo "" ;;
     esac
 }
@@ -59,23 +67,52 @@ print_msg() {
 auto_detect_task() {
     local changes=$1
     
+    # 检测 md/ 文档（优先检测）
+    if echo "$changes" | grep -q "md/"; then
+        echo "docs"
+    # 检测配置和环境变量
+    elif echo "$changes" | grep -q "\.env\|config/\|config\."; then
+        echo "step17"
+    # 检测中间件
+    elif echo "$changes" | grep -q "middlewares/\|middleware/"; then
+        echo "step16"
+    # 检测历史对话
+    elif echo "$changes" | grep -q "history.route\|history.service"; then
+        echo "step15"
+    # 检测流式接口
+    elif echo "$changes" | grep -q "chat/stream\|streamResponse"; then
+        echo "step14"
+    # 检测对话接口
+    elif echo "$changes" | grep -q "chat.route\|chat.service"; then
+        echo "step13"
+    # 检测 RAG 检索
+    elif echo "$changes" | grep -q "retrieval\|prompt.service\|similarity"; then
+        echo "step19"
+    # 检测对话服务
+    elif echo "$changes" | grep -q "chat.service"; then
+        echo "step20"
+    # 检测 Embedding 服务
+    elif echo "$changes" | grep -q "embedding.service"; then
+        echo "step18"
     # 检测是否包含 src/ 前端代码
-    if echo "$changes" | grep -q "src/"; then
+    elif echo "$changes" | grep -q "src/"; then
         if echo "$changes" | grep -q "components/FileUpload"; then
             echo "step2"
         elif echo "$changes" | grep -q "components/TextPreview"; then
             echo "step3"
         elif echo "$changes" | grep -q "components/ChatInput"; then
             echo "step4"
-        elif echo "$changes" | grep -q "components/Message"; then
+        elif echo "$changes" | grep -q "components/Message\|components/ChatList"; then
             echo "step5"
         elif echo "$changes" | grep -q "views/\|pages/"; then
             echo "step10"
+        elif echo "$changes" | grep -q "utils/request\|utils/stream"; then
+            echo "step6"
         else
             echo "step1"
         fi
     # 检测后端 API
-    elif echo "$changes" | grep -q "server/\|api/"; then
+    elif echo "$changes" | grep -q "server/\|api/\|routes/\|services/"; then
         if echo "$changes" | grep -q "embedding\|vector"; then
             echo "step8"
         elif echo "$changes" | grep -q "rag\|retrieval"; then
@@ -85,9 +122,6 @@ auto_detect_task() {
         else
             echo "step6"
         fi
-    # 检测 md/ 文档
-    elif echo "$changes" | grep -q "md/"; then
-        echo "docs"
     else
         echo "unknown"
     fi
@@ -210,7 +244,7 @@ if [ "$AUTO_PUSH" = true ]; then
     git commit -m "$COMMIT_MSG"
     print_msg "$GREEN" "✅ Commit 提交成功！"
     
-    git push
+        git push
     if [ $? -eq 0 ]; then
         print_msg "$GREEN" "🚀 已推送到远程仓库"
     else
