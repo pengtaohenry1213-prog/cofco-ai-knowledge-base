@@ -242,9 +242,9 @@ if [ "$AUTO_PUSH" = true ]; then
     # 自动模式：直接提交并推送
     print_msg "$BLUE" "🚀 自动提交并推送..."
     git commit -m "$COMMIT_MSG"
-    print_msg "$GREEN" "✅ Commit 提交成功！"
-    
-        git push
+            print_msg "$GREEN" "✅ Commit 提交成功！"
+            
+            git push -u origin main
     if [ $? -eq 0 ]; then
         print_msg "$GREEN" "🚀 已推送到远程仓库"
     else
@@ -260,7 +260,7 @@ else
         
         read -p "🚀 是否推送到 GitHub？(y/n): " push_confirm
         if [ "$push_confirm" = "y" ] || [ "$push_confirm" = "Y" ]; then
-            git push
+            git push -u origin main
             if [ $? -eq 0 ]; then
                 print_msg "$GREEN" "🚀 已推送到远程仓库"
             else
