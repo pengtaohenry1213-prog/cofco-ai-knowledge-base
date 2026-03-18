@@ -1,0 +1,19 @@
+{
+  "name": "ai-knowledge-assistant",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/frontend",
+    "packages/backend",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev:frontend": "pnpm --filter @ai-ka/frontend dev",
+    "dev:backend": "pnpm --filter @ai-ka/backend dev",
+    "dev": "concurrently \"pnpm run dev:frontend\" \"pnpm run dev:backend\"",
+    "start:backend": "pnpm --filter @ai-ka/backend start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
