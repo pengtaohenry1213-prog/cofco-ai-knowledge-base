@@ -1,11 +1,12 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-// 加载环境变量
+import express from 'express'; // express 框架
+import cors from 'cors'; // cors 跨域
+import dotenv from 'dotenv'; // dotenv 环境变量
+
+// 加载根目录环境变量
 dotenv.config({ path: '../../.env' });
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // 基础中间件
 app.use(cors());

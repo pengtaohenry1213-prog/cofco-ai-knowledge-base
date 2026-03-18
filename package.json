@@ -7,11 +7,11 @@
     "packages/backend",
     "packages/shared"
   ],
+  "packageManager": "pnpm@8.0.0",
   "scripts": {
-    "dev:frontend": "pnpm --filter @ai-ka/frontend dev",
+    "dev": "pnpm run dev:backend & pnpm run dev:frontend",
     "dev:backend": "pnpm --filter @ai-ka/backend dev",
-    "dev": "concurrently \"pnpm run dev:frontend\" \"pnpm run dev:backend\"",
-    "start:backend": "pnpm --filter @ai-ka/backend start"
+    "dev:frontend": "pnpm --filter @ai-ka/frontend dev"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

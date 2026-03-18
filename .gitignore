@@ -1,2 +1,7 @@
-md/
+doc/
+scripts/
 node_modules/
+.env
+backup/
+# macOS
+.DS_Store

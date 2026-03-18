@@ -13,7 +13,6 @@ export default defineConfig({
   server: {
     port: 8080,
     proxy: {
-      // 代理后端接口，解决跨域
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true
