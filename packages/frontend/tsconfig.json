@@ -6,7 +6,8 @@
       "@/*": ["src/*"],
       "@ai-ka/shared/*": ["../../shared/src/*"]
     },
-    "lib": ["ES2020", "DOM", "DOM.Iterable"]
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["vitest/globals"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]
 }
