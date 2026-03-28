@@ -1,7 +1,10 @@
 doc/
+.my-rules/
+.cursor/
 scripts/
 node_modules/
 .env
 backup/
+
 # macOS
 .DS_Store
