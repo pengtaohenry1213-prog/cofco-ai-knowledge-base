@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import routes from './routes/index.js';
-import { logger } from './middlewares/logger.middleware.js';
-import { errorHandler } from './middlewares/error.middleware.js';
+import routes from './routes/index';
+import { logger } from './middlewares/logger.middleware';
+import { errorHandler } from './middlewares/error.middleware';
 
 dotenv.config({ path: '../../.env' });
 

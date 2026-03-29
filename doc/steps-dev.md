@@ -100,7 +100,7 @@
 | step4 | ⬜ 待开始 | Frontend | - | - | - |
 | step5 | ⬜ 待开始 | Frontend（UI） | - | - | - |
 | step6 | ✅ 完成 | Backend | - | doc/plans/step1-plan.md | - |
-| step7 | ⬜ 待开始 | Backend | - | - | - |
+| step7 | ⬜ 待开始 | Backend | - | doc/plans/step7-plan.md | - |
 | step8 | ⬜ 待开始 | Backend | - | - | - |
 | step9 | ⬜ 待开始 | Backend | - | - | - |
 | step10 | ⬜ 待开始 | Backend | - | - | - |
