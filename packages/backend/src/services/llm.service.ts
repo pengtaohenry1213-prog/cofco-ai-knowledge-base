@@ -131,3 +131,121 @@ export async function chatCompletion(prompt: string): Promise<LLMResult> {
     error: `LLM 请求失败: ${lastError?.message || '未知错误'}`
   };
 }
+
+/** 豆包流式对话 API 请求参数 */
+interface DoubaoStreamRequest {
+  model: string;
+  messages: Array<{
+    role: string;
+    content: string;
+  }>;
+  stream: boolean;
+}
+
+/**
+ * 调用豆包流式对话 API，逐块处理响应
+ *
+ * @param prompt - 构造好的 Prompt
+ * @param onChunk - 每块数据回调 (chunk: string) => void
+ * @param onError - 错误回调 (error: string) => void
+ * @returns Promise<void>
+ */
+export async function chatCompletionStream(
+  prompt: string,
+  onChunk: (chunk: string) => void,
+  onError: (error: string) => void
+): Promise<void> {
+  if (!DOUBAO_API_KEY) {
+    onError('API Key 未配置');
+    return;
+  }
+
+  if (!prompt || prompt.trim().length === 0) {
+    onError('Prompt 不能为空');
+    return;
+  }
+
+  const endpoint = `${DOUBAO_BASE_URL}/chat/completions`;
+
+  try {
+    const requestBody: DoubaoStreamRequest = {
+      model: 'doubao-pro-32k',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      stream: true
+    };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DOUBAO_API_KEY}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      onError(`API 请求失败: ${response.status} ${response.statusText} ${errorBody}`.trim());
+      return;
+    }
+
+    if (!response.body) {
+      onError('响应体为空');
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // 按行分割处理
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || !trimmedLine.startsWith('data:')) {
+            continue;
+          }
+
+          const dataStr = trimmedLine.slice(5).trim();
+
+          // 跳过 [DONE] 标记
+          if (dataStr === '[DONE]') {
+            continue;
+          }
+
+          try {
+            const data = JSON.parse(dataStr);
+            const content = data.data?.choices?.[0]?.delta?.content;
+            if (content) {
+              onChunk(content);
+            }
+          } catch {
+            // 忽略解析错误，继续处理下一行
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    onError(`流式请求失败: ${errorMessage}`);
+  }
+}
