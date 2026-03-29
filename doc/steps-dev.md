@@ -102,7 +102,7 @@
 | step6 | ✅ 完成 | Backend | - | doc/plans/step1-plan.md | - |
 | step7 | ✅ 完成 | Backend | - | doc/plans/step7-plan.md | - |
 | step8 | ✅ 完成 | Backend | - | doc/plans/step8-plan.md | - |
-| step9 | ⬜ 待开始 | Backend | - | - | - |
+| step9 | ✅ 完成 | Backend | - | doc/plans/step8-plan.md | - |
 | step10 | ⬜ 待开始 | Backend | - | - | - |
 | step11 | ⬜ 待开始 | Backend | - | - | - |
 | step12 | ⬜ 待开始 | Frontend（集成） | - | - | - |

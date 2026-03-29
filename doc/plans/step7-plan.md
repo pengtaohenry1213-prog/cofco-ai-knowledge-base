@@ -1,42 +1,32 @@
 ---
-name: step7-plan.md
+name: step7-文件上传接口
 overview: 按 step7.md 规格，为后端开发 /api/file/upload 接口，实现文件上传、校验与解析功能，并编写接口测试
 todos:
   - id: step7-deps
     content: 安装依赖：multer、pdf-parse、mammoth、@types/multer
-    status: pending
+    status: completed
   - id: step7-types
     content: 创建 src/types/file.types.ts（文件相关 TS 类型定义）
-    status: pending
+    status: completed
   - id: step7-service
     content: 创建 src/services/file.service.ts（pdf-parse + mammoth 解析服务）
-    status: pending
+    status: completed
   - id: step7-route
     content: 创建 src/routes/file.route.ts（multer + /api/file/upload）
-    status: pending
+    status: completed
   - id: step7-register
     content: 在 src/index.ts 中注册 file.route
-    status: pending
+    status: completed
   - id: step7-test
     content: 编写测试文件 src/__tests__/file.test.ts（覆盖 TC-FILE-001～007）
-    status: pending
+    status: completed
   - id: step7-verify
     content: 验证接口：运行测试，确保所有用例通过
-    status: pending
+    status: completed
 isProject: false
 ---
 
-> Plan 文件 — step7 文件上传接口开发
-> 生成时间：2026-03-29
-> 角色：Backend
-
----
-
-## 背景
-
-根据 `doc/steps/step7.md` 规格，为后端开发 `/api/file/upload` 接口。接口需实现文件接收、校验（类型/大小）、PDF/Word 解析返回文本，并编写完整的接口测试。
-
----
+# Step7 Plan: 文件上传接口开发
 
 ## 任务目标
 
@@ -46,9 +36,8 @@ isProject: false
 
 更新后的 step7.md 新增了**测试要求**部分，包含 7 个测试用例（文件类型、大小、空文件、损坏文件等场景）
 
----
-
 ## Todo 清单
+
 
 | ID  | 任务                                                                | 状态      |
 | --- | ----------------------------------------------------------------- | ------- |
@@ -60,7 +49,6 @@ isProject: false
 | 6   | 编写测试文件 `src/__tests__/file.test.ts`（覆盖 TC-FILE-001～007）           | pending |
 | 7   | 验证接口：运行测试，确保所有用例通过                                                | pending |
 
----
 
 ## 文件路径清单
 
@@ -77,9 +65,8 @@ packages/backend/src/
     └── file.test.ts               ← 新增：接口测试
 ```
 
----
-
 ## 验收标准
+
 
 | 验收项      | 预期结果                                                     |
 | -------- | -------------------------------------------------------- |
@@ -92,9 +79,9 @@ packages/backend/src/
 | 未上传文件    | 返回 "未上传文件"                                               |
 | 内存管理     | 不在内存中存储大文本，仅返回后释放                                        |
 
----
 
 ## 测试用例覆盖
+
 
 | 用例ID        | 测试场景                          |
 | ----------- | ----------------------------- |
@@ -106,7 +93,6 @@ packages/backend/src/
 | TC-FILE-006 | 不带文件参数请求接口 → 返回 "未上传文件"       |
 | TC-FILE-007 | 连续上传多个文件 → 每个独立解析             |
 
----
 
 ## 执行顺序
 
@@ -117,3 +103,4 @@ packages/backend/src/
 5. 注册路由 → `src/index.ts`
 6. 编写测试 → `file.test.ts`
 7. 运行测试验证
+
