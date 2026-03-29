@@ -1,0 +1,18 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Running pre-commit tests..."
+
+# 运行后端测试
+echo "Running backend tests..."
+cd packages/backend && pnpm test
+cd ..
+
+# 运行前端测试（如果目录存在）
+echo "Running frontend tests..."
+if [ -d "packages/frontend" ]; then
+    cd packages/frontend && pnpm test
+    cd ..
+else
+    echo "Frontend directory not found, skipping..."
+fi

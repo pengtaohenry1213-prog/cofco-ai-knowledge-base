@@ -1,24 +1,28 @@
-import express from 'express'; // express 框架
-import cors from 'cors'; // cors 跨域
-import dotenv from 'dotenv'; // dotenv 环境变量
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import routes from './routes/index.js';
+import { logger } from './middlewares/logger.middleware.js';
+import { errorHandler } from './middlewares/error.middleware.js';
 
-// 加载根目录环境变量
 dotenv.config({ path: '../../.env' });
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
-// 基础中间件
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(logger);
 
-// 健康检查接口
+app.use('/api', routes);
+
 app.get('/api/health', (_req, res) => {
   res.json({ code: 200, msg: 'server is running' });
 });
 
-// 启动服务
+app.use(errorHandler);
+
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });
