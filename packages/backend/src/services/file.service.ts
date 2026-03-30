@@ -44,7 +44,7 @@ export class FileService {
   private async parseDocx(buffer: Buffer): Promise<string> {
     try {
       const result = await mammoth.extractRawText({ buffer });
-      return result.value;
+      return result.value || '';
     } catch (error) {
       throw new Error(FILE_ERROR_MESSAGES.PARSE_FAILED);
     }

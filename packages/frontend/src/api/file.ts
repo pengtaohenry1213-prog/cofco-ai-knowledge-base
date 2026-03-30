@@ -54,6 +54,15 @@ export function getFileExtension(filename: string): string {
   return filename.toLowerCase().substring(filename.lastIndexOf('.'));
 }
 
+/** 文件上传成功响应 */
+export interface FileUploadResponse {
+  success: boolean;
+  data: {
+    text: string;
+  } | null;
+  error: string | null;
+}
+
 /**
  * 上传文件到服务器
  * @param file 文件对象
@@ -84,7 +93,7 @@ export async function uploadFile(
   formData.append('file', file);
 
   try {
-    const response = await axios.post<FileUploadResult>(
+    const response = await axios.post<FileUploadResponse>(
       '/api/file/upload',
       formData,
       {
@@ -100,9 +109,16 @@ export async function uploadFile(
       }
     );
 
+    if (!response.data.success || !response.data.data) {
+      return Promise.reject({
+        type: 'server' as UploadErrorType,
+        message: response.data.error || '服务器处理失败'
+      });
+    }
+
     return {
       filename: file.name,
-      content: response.data.content || response.data.filename
+      content: response.data.data.text
     };
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -112,9 +128,10 @@ export async function uploadFile(
           message: '网络连接失败，请检查网络'
         });
       }
+      const errorData = error.response.data as FileUploadResponse | undefined;
       return Promise.reject({
         type: 'server' as UploadErrorType,
-        message: error.response.data?.message || `服务器错误 (${error.response.status})`
+        message: errorData?.error || error.response.data?.message || `服务器错误 (${error.response.status})`
       });
     }
     return Promise.reject({
