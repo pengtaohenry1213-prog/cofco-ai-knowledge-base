@@ -7,6 +7,9 @@
 
 RAG 系统需要将文本转换为向量才能进行相似度计算，Embedding 是核心基础设施。
 
+## 豆包配置信息
+参考： ~/config/doubao-model.md
+
 ## 📋 任务要求
 
 1. Embedding API 封装（src/services/embedding.service.ts）：

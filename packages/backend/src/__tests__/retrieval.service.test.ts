@@ -14,7 +14,7 @@ describe('searchTopK', () => {
     vi.resetModules();
     process.env = { ...originalEnv };
     process.env.DOUBAO_API_KEY = 'test-api-key';
-    process.env.DOUBAO_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
+    process.env.DOUBAO_API_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
     mockFetch.mockReset();
   });
 
@@ -169,9 +169,16 @@ describe('searchTopK', () => {
     expect(result.error).toBe('invalid input');
   });
 
-  // API Key 未配置时返回错误
-  it('API Key未配置时返回错误', async () => {
-    delete process.env.DOUBAO_API_KEY;
+  // 配置校验在服务启动时执行（已在 index.ts 测试）
+  // 此处验证正常情况下 API Key 校验通过
+  it('正常配置下 API Key 校验通过', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        code: 0,
+        data: { embeddings: [{ embedding: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9], index: 0 }] }
+      })
+    });
 
     const { vectorStore } = await import('../services/embedding.service');
     vi.spyOn(vectorStore, 'getAllVectors').mockReturnValue([
@@ -181,7 +188,6 @@ describe('searchTopK', () => {
     const { searchTopK } = await import('../services/retrieval.service');
     const result = await searchTopK('测试问题', 1);
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('API Key 未配置');
+    expect(result.success).toBe(true);
   });
 });

@@ -11,7 +11,9 @@
 
 1. 环境变量配置（.env 文件）：
 
-   ```
+> 具体 豆包对话 API 配置信息 请参考： ~/config/doubao-model.md
+
+   ```javascript
    PORT=3000
    DOUBAO_API_KEY=279dc1d3-2003-4aa2-baea-5ceda434f97e
    DOUBAO_API_BASE_URL=https://ark.cn-beijing.volces.com/api/v3

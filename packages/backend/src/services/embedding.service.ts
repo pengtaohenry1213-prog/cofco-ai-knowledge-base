@@ -5,11 +5,7 @@ import {
   DoubaoEmbeddingResponse,
   ChunkOptions
 } from '../types/embedding.types';
-
-/** 豆包 API Key（从环境变量读取） */
-const DOUBAO_API_KEY = process.env.DOUBAO_API_KEY || '';
-/** 豆包 API 基础地址 */
-const DOUBAO_BASE_URL = process.env.DOUBAO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
+import { config } from '../config';
 
 /** 默认分块参数 */
 const DEFAULT_CHUNK_SIZE = 500;
@@ -135,15 +131,11 @@ export function splitIntoChunks(
  * @returns EmbeddingResult
  */
 export async function createEmbedding(text: string): Promise<EmbeddingResult> {
-  if (!DOUBAO_API_KEY) {
-    return { success: false, error: 'API Key 未配置' };
-  }
-
   if (!text || text.trim().length === 0) {
     return { success: false, error: '文本内容为空' };
   }
 
-  const endpoint = `${DOUBAO_BASE_URL}/embeddings`;
+  const endpoint = `${config.doubao.baseUrl}/embeddings`;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -155,7 +147,7 @@ export async function createEmbedding(text: string): Promise<EmbeddingResult> {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DOUBAO_API_KEY}`
+          'Authorization': `Bearer ${config.doubao.apiKey}`
         },
         body: JSON.stringify({
           model: 'embedding-v1',

@@ -7,6 +7,9 @@
 
 RAG 系统的最后一步是将拼接好的 Prompt 发送给豆包 API，获取 AI 的回答。非流式返回完整回答，流式逐字返回提升用户体验。
 
+## 豆包对话 API 配置信息
+参考： ~/config/doubao-model.md
+
 ## 📋 任务要求
 
 1. 非流式对话（src/services/chat.service.ts）：

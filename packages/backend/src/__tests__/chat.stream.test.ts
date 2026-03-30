@@ -12,7 +12,7 @@ describe('chatCompletionStream', () => {
     vi.resetModules();
     process.env = { ...originalEnv };
     process.env.DOUBAO_API_KEY = 'test-api-key';
-    process.env.DOUBAO_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
+    process.env.DOUBAO_API_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
     mockFetch.mockReset();
   });
 
@@ -21,18 +21,31 @@ describe('chatCompletionStream', () => {
     vi.restoreAllMocks();
   });
 
-  // TC-STREAM-109: API 返回错误
-  it('TC-STREAM-109: API Key 未配置时调用 onError', async () => {
-    delete process.env.DOUBAO_API_KEY;
-
+  // TC-STREAM-109: 配置校验在服务启动时执行（已在 index.ts 测试）
+  // 此处验证正常情况下 API Key 校验通过
+  it('TC-STREAM-109: 正常配置下 API Key 校验通过', async () => {
     const onChunk = vi.fn();
     const onError = vi.fn();
+
+    // 模拟正常流式响应
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"data":{"choices":[{"delta":{"content":"测试"}}]}}\n'));
+        controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+        controller.close();
+      }
+    });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      body: stream
+    });
 
     const { chatCompletionStream } = await import('../services/llm.service');
     await chatCompletionStream('测试问题', onChunk, onError);
 
-    expect(onError).toHaveBeenCalledWith('API Key 未配置');
-    expect(onChunk).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+    expect(onChunk).toHaveBeenCalled();
   });
 
   // TC-STREAM-107: 空 Prompt 校验

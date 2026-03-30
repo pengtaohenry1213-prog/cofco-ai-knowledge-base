@@ -2,6 +2,7 @@
  * LLM 对话服务
  * 调用豆包对话 API 生成回答
  */
+import { config } from '../config';
 
 /** LLM API 调用结果 */
 export interface LLMResult {
@@ -32,11 +33,6 @@ interface DoubaoChatResponse {
   };
 }
 
-/** 豆包 API Key（从环境变量读取） */
-const DOUBAO_API_KEY = process.env.DOUBAO_API_KEY || '';
-/** 豆包 API 基础地址 */
-const DOUBAO_BASE_URL = process.env.DOUBAO_BASE_URL || 'https://ark.cn-beijing.volces.com/api/v3';
-
 /** API 超时时间（ms） */
 const API_TIMEOUT_MS = 30_000;
 
@@ -50,15 +46,11 @@ const MAX_RETRIES = 2;
  * @returns LLMResult
  */
 export async function chatCompletion(prompt: string): Promise<LLMResult> {
-  if (!DOUBAO_API_KEY) {
-    return { success: false, error: 'API Key 未配置' };
-  }
-
   if (!prompt || prompt.trim().length === 0) {
     return { success: false, error: 'Prompt 不能为空' };
   }
 
-  const endpoint = `${DOUBAO_BASE_URL}/chat/completions`;
+  const endpoint = `${config.doubao.baseUrl}/chat/completions`;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -67,7 +59,7 @@ export async function chatCompletion(prompt: string): Promise<LLMResult> {
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
       const requestBody: DoubaoChatRequest = {
-        model: 'doubao-pro-32k',
+        model: config.doubao.model,
         messages: [
           {
             role: 'user',
@@ -80,7 +72,7 @@ export async function chatCompletion(prompt: string): Promise<LLMResult> {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${DOUBAO_API_KEY}`
+          'Authorization': `Bearer ${config.doubao.apiKey}`
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal
@@ -155,21 +147,16 @@ export async function chatCompletionStream(
   onChunk: (chunk: string) => void,
   onError: (error: string) => void
 ): Promise<void> {
-  if (!DOUBAO_API_KEY) {
-    onError('API Key 未配置');
-    return;
-  }
-
   if (!prompt || prompt.trim().length === 0) {
     onError('Prompt 不能为空');
     return;
   }
 
-  const endpoint = `${DOUBAO_BASE_URL}/chat/completions`;
+  const endpoint = `${config.doubao.baseUrl}/chat/completions`;
 
   try {
     const requestBody: DoubaoStreamRequest = {
-      model: 'doubao-pro-32k',
+      model: config.doubao.model,
       messages: [
         {
           role: 'user',
@@ -183,7 +170,7 @@ export async function chatCompletionStream(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DOUBAO_API_KEY}`
+        'Authorization': `Bearer ${config.doubao.apiKey}`
       },
       body: JSON.stringify(requestBody)
     });

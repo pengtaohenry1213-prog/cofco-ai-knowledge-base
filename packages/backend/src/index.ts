@@ -1,14 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import routes from './routes/index';
 import { logger } from './middlewares/logger.middleware';
 import { errorHandler, BusinessError } from './middlewares/error.middleware';
-
-dotenv.config({ path: '../../.env' });
+import { config } from './config';
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -31,6 +28,6 @@ app.use((_req, _res, next) => {
 // 异常处理中间件 - 末尾：捕获所有未处理异常
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Backend server running on http://localhost:${PORT}`);
+app.listen(config.port, () => {
+  console.log(`Backend server running on http://localhost:${config.port}`);
 });

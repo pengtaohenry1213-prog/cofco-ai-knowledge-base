@@ -10,7 +10,7 @@ describe('chatWithDocument', () => {
     vi.resetModules();
     process.env = { ...originalEnv };
     process.env.DOUBAO_API_KEY = 'test-api-key';
-    process.env.DOUBAO_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
+    process.env.DOUBAO_API_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
     mockFetch.mockReset();
   });
 
