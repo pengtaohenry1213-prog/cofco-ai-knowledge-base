@@ -1,11 +1,13 @@
 # 项目结构初始化.md（基础框架版）
 
 ## 一、前置条件
+
 1. 已安装 `pnpm`（`npm install -g pnpm`）
 2. 已初始化 Git 仓库（可选）
 3. 工作目录：`ai-knowledge-assistant/`（根目录）
 
 ## 二、快速初始化目录结构
+
 ```bash
 # 创建根目录（若未创建）
 mkdir -p ai-knowledge-assistant && cd ai-knowledge-assistant
@@ -15,6 +17,7 @@ mkdir -p packages/{frontend/src/{views,components,utils,api},backend/src/{routes
 ```
 
 ## 三、项目目录结构
+
 ```plaintext
 ai-knowledge-assistant/
 ├── packages/
@@ -48,6 +51,7 @@ ai-knowledge-assistant/
 ## 四、根目录配置
 
 ### 4.1 package.json
+
 ```json
 {
   "name": "ai-knowledge-assistant",
@@ -64,6 +68,7 @@ ai-knowledge-assistant/
 ```
 
 ### 4.2 tsconfig.json（全局共享）
+
 ```json
 {
   "compilerOptions": {
@@ -82,15 +87,18 @@ ai-knowledge-assistant/
 ```
 
 ### 4.3 .env（环境变量）
+
 ```env
 # 后端端口
 PORT=3000
 # 豆包 API 配置
-DOUBAO_API_KEY=your_doubao_api_key
-DOUBAO_API_BASE_URL=https://api.doubao.com/v1
+DOUBAO_API_KEY=279dc1d3-2003-4aa2-baea-5ceda434f97e
+DOUBAO_API_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+DOUBAO_MODEL_NAME=doubao-seed-2-0-code-preview-260215
 ```
 
 ### 4.4 pnpm-workspace.yaml
+
 ```yaml
 packages:
   - 'packages/*'
@@ -99,7 +107,9 @@ packages:
 ## 五、子包配置
 
 ### 5.1 shared 包（共享类型）
+
 #### packages/shared/package.json
+
 ```json
 {
   "name": "@ai-ka/shared",
@@ -114,11 +124,13 @@ packages:
 ```
 
 #### packages/shared/src/index.ts
+
 ```typescript
 export * from './types/chat';
 ```
 
 #### packages/shared/src/types/chat.ts
+
 ```typescript
 export interface ChatItem {
   id: string;
@@ -138,6 +150,7 @@ export interface HistoryItem {
 ### 5.2 frontend 包（Vue3 + Vite）
 
 #### packages/frontend/package.json
+
 ```json
 {
   "name": "@ai-ka/frontend",
@@ -165,6 +178,7 @@ export interface HistoryItem {
 ```
 
 #### packages/frontend/vite.config.ts
+
 ```typescript
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
@@ -191,6 +205,7 @@ export default defineConfig({
 ```
 
 #### packages/frontend/tsconfig.json
+
 ```json
 {
   "extends": "../../tsconfig.json",
@@ -207,6 +222,7 @@ export default defineConfig({
 ```
 
 #### packages/frontend/index.html
+
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -224,6 +240,7 @@ export default defineConfig({
 ```
 
 #### packages/frontend/src/vite-env.d.ts
+
 ```typescript
 /// <reference types="vite/client" />
 declare module '*.vue' {
@@ -236,6 +253,7 @@ declare module '*.vue' {
 ### 5.3 backend 包（Express + TS）
 
 #### packages/backend/package.json
+
 ```json
 {
   "name": "@ai-ka/backend",
@@ -263,6 +281,7 @@ declare module '*.vue' {
 ```
 
 #### packages/backend/tsconfig.json
+
 ```json
 {
   "compilerOptions": {
@@ -290,6 +309,7 @@ declare module '*.vue' {
 ```
 
 #### packages/backend/src/index.ts
+
 ```typescript
 import express from 'express';
 import cors from 'cors';
@@ -318,6 +338,7 @@ app.listen(PORT, () => {
 ```
 
 ## 六、依赖安装
+
 ```bash
 pnpm install
 ```
@@ -325,6 +346,7 @@ pnpm install
 ## 七、启动与验证
 
 ### 启动命令
+
 ```bash
 # 并行启动前后端
 pnpm run dev
@@ -337,10 +359,12 @@ pnpm run dev:frontend
 ```
 
 ### 验证步骤
+
 1. 后端验证：访问 `http://localhost:3000/api/health`
 2. 前端验证：访问 `http://localhost:8080`
 
 ### Todo
+
 1. 检查并更新根目录配置文件 (.env, pnpm-workspace.yaml, package.json)
 2. 创建 shared 包配置文件 (package.json, tsconfig.json, src/index.ts, src/types/chat.ts)
 3. 创建 frontend 包配置文件 (package.json, vite.config.ts, tsconfig.json, index.html, main.ts, App.vue, vite-env.d.ts)
@@ -348,11 +372,13 @@ pnpm run dev:frontend
 5. 运行 pnpm install 验证依赖
 
 ## 八、注意事项
+
 1. `.env` 文件需替换实际的 `DOUBAO_API_KEY`，已加入 `.gitignore`
 2. 端口调整：后端修改 `.env` 中的 `PORT`，前端修改 `vite.config.ts` 中的 `port`
 3. 前端业务代码（router, store, views, request）由 **step1.md** 实现
 
 ## Git Commit
+
 ```plaintext
 feat: 初始化AI智能知识库助手项目结构
 - 搭建pnpm monorepo工作区（frontend/backend/shared子包）

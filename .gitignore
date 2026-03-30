@@ -1,6 +1,6 @@
 # doc/
 .my-rules/
-.cursor/
+# .cursor/
 scripts/
 node_modules/
 .env

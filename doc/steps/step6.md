@@ -1,11 +1,14 @@
 
-## 🎯 任务目标
+# 🎯 任务目标
+
 初始化 Express + TypeScript 后端项目，搭建基础分层结构
 
 ## 🧱 项目背景
+
 AI智能知识库助手后端需提供文件解析、Embedding、RAG检索、流式对话等接口，需先搭建规范的项目骨架。
 
 ## 📋 任务要求
+
 * 使用 pnpm init 初始化项目，安装核心依赖（express、typescript、@types/express、ts-node、cors、dotenv）
 * 配置 tsconfig.json（启用严格模式、指定输出目录、路径别名）
 * 搭建分层结构：src/routes、src/services、src/utils、src/types、src/middlewares
@@ -13,11 +16,13 @@ AI智能知识库助手后端需提供文件解析、Embedding、RAG检索、流
 * 实现健康检查接口（GET /api/health），返回 { code: 200, msg: 'server is running' }
 
 ## ⚠️ 强约束
+
 * 所有代码使用 TypeScript 编写，类型定义完整
 * 服务启动需处理端口占用、异常捕获
 * 中间件注册顺序合理（cors → 解析 → 路由 → 异常处理）
 
 ## 📤 输出格式
+
 1. 后端项目目录结构（tree形式）
 2. 关键文件完整代码：
    * src/index.ts（服务入口）
@@ -26,6 +31,7 @@ AI智能知识库助手后端需提供文件解析、Embedding、RAG检索、流
    * src/middlewares/logger.middleware.ts（简单日志）
 
 ## 🚫 禁止行为
+
 * 不要省略核心依赖
 * 不要忽略跨域配置
 * 不要写无类型的松散代码
@@ -37,12 +43,14 @@ AI智能知识库助手后端需提供文件解析、Embedding、RAG检索、流
 ### 测试类型：功能测试 + 冒烟测试
 
 ### 测试范围
+
 - 健康检查接口 `/api/health`
-- Express 服务启动
-- 中间件注册顺序
-- 跨域配置
+* Express 服务启动
+* 中间件注册顺序
+* 跨域配置
 
 ### 测试用例
+
 | 用例ID | 测试场景 | 预期结果 | 实际结果 | 测试状态 |
 |--------|---------|---------|---------|----------|
 | TC-INIT-001 | GET /api/health 返回 200 | 返回 `{code: 200, msg: "server is running"}` | - | - |
@@ -57,6 +65,7 @@ AI智能知识库助手后端需提供文件解析、Embedding、RAG检索、流
 | TC-INIT-010 | 服务重启可用 | 停止后重新启动正常 | - | - |
 
 ### 问题清单
+
 | 序号 | 问题描述 | 严重级别 | 复现步骤 | 问题状态 |
 |------|---------|---------|---------|----------|
 | 1 | - | - | - | - |
@@ -64,9 +73,11 @@ AI智能知识库助手后端需提供文件解析、Embedding、RAG检索、流
 ---
 
 ## 项目目录结构（tree 形式）
+
 - 参考：`md/项目结构.md`
 
 ## 项目 git commit 规范
+
 - 参考：`md/Git提交规范.md`
 
 > 注：auto-commit.sh 会自动生成的内容（当检测到 step 相关变更时）：feat: step6.md - 初始化 Express + TypeScript 后端项目，搭建基础分层结构并实现健康检查接口

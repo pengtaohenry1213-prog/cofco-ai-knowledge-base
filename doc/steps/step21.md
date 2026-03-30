@@ -1,8 +1,10 @@
 
-## 任务目标
+# 任务目标
+
 安装测试框架，为前端和后端项目配置 Vitest 测试环境，保障后续 step 开发有测试人员参与，保障代码质量。
 
 ## 项目背景
+
 为确保 AI 智能知识库助手的代码质量，需要在项目初期建立测试基础设施。Vitest 与 Vite 项目天然集成，支持 Vue 和 Node.js 测试，是当前最佳选择。
 
 ## 测试框架选型
@@ -15,11 +17,13 @@
 ## 前端测试配置
 
 ### 1. 安装依赖
+
 ```bash
 pnpm add -D vitest @vue/test-utils jsdom @vitejs/plugin-vue
 ```
 
 ### 2. packages/frontend/vite.config.ts
+
 ```typescript
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
@@ -51,6 +55,7 @@ export default defineConfig({
 ```
 
 ### 3. packages/frontend/src/utils/__tests__/setup.ts
+
 ```typescript
 import { vi } from 'vitest';
 
@@ -78,6 +83,7 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 ```
 
 ### 4. packages/frontend/package.json 更新
+
 ```json
 {
   "scripts": {
@@ -92,6 +98,7 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 ```
 
 ### 5. packages/frontend/tsconfig.json
+
 ```json
 {
   "extends": "../../tsconfig.json",
@@ -111,11 +118,13 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 ## 后端测试配置
 
 ### 1. 安装依赖
+
 ```bash
 pnpm add -D vitest
 ```
 
 ### 2. packages/backend/package.json 更新
+
 ```json
 {
   "scripts": {
@@ -130,6 +139,7 @@ pnpm add -D vitest
 ```
 
 ### 3. packages/backend/tsconfig.json
+
 ```json
 {
   "compilerOptions": {
@@ -162,11 +172,13 @@ pnpm add -D vitest
 配置 Git pre-commit 钩子，在提交前自动运行测试。
 
 ### 1. 安装依赖
+
 ```bash
 pnpm add -D husky lint-staged
 ```
 
 ### 2. 根目录 package.json 添加 lint-staged 配置
+
 ```json
 {
   "lint-staged": {
@@ -177,6 +189,7 @@ pnpm add -D husky lint-staged
 ```
 
 ### 3. 创建 .husky/pre-commit 钩子
+
 ```bash
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
@@ -194,11 +207,13 @@ cd packages/frontend && pnpm test
 ```
 
 ### 4. 初始化 husky
+
 ```bash
 npx husky install
 ```
 
 ### 5. 验证
+
 ```bash
 # 手动触发 pre-commit 钩子测试
 npx husky run pre-commit
@@ -211,6 +226,7 @@ cd packages/frontend && pnpm test
 ## 示例测试文件
 
 ### Frontend: packages/frontend/src/utils/__tests__/example.test.ts
+
 ```typescript
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
@@ -230,6 +246,7 @@ describe('Example Test Suite', () => {
 ```
 
 ### Backend: packages/backend/src/__tests__/example.test.ts
+
 ```typescript
 import { describe, it, expect } from 'vitest';
 
@@ -248,10 +265,12 @@ describe('Example Backend Test Suite', () => {
 ## 测试规范引用
 
 ### 测试标准文档
+
 - 详细测试规范：`.my-rules/TEST.md`
 - 简明测试规则：`.cursor/rules/TEST.mdc`
 
 ### 问题级别标准
+
 | 级别 | 定义 | 处理要求 |
 |-----|------|---------|
 | P0 | 核心不可用或数据严重错误，阻塞发布 | 必须立即修复 |
@@ -260,11 +279,13 @@ describe('Example Backend Test Suite', () => {
 | P3 | 文案、轻微视觉、体验类 | 可后续迭代优化 |
 
 ### 测试报告要求
+
 - 覆盖目标：核心场景 100%，非核心场景 ≥95%
 - 包含：前置条件、步骤、可观察的预期结果
 - 缺陷需包含：环境、步骤、实际 vs 期望、证据
 
 ## 目录结构
+
 ```
 ai-knowledge-assistant/
 ├── packages/
@@ -281,6 +302,7 @@ ai-knowledge-assistant/
 ```
 
 ## Git Commit
+
 ```bash
 chore: install vitest testing framework for frontend and backend
 
@@ -292,6 +314,7 @@ chore: install vitest testing framework for frontend and backend
 ```
 
 ## 验证步骤
+
 ```bash
 # 安装依赖后初始化 husky
 npx husky install
@@ -308,6 +331,7 @@ pnpm coverage
 ```
 
 ## Git Commit
+
 ```bash
 feat: 初始化安装 前、后端 Vitest 测试框架 + Husky CI
 
