@@ -8,3 +8,6 @@ backup/
 
 # macOS
 .DS_Store
+
+# Build outputs
+dist/
