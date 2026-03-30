@@ -77,7 +77,7 @@
 
 ### 测试范围
 
-- POST /api/history 新增对话
+* POST /api/history 新增对话
 * GET /api/history 查询历史
 * DELETE /api/history 清空历史
 * GET /api/history/:id 查询单条
@@ -86,19 +86,19 @@
 
 | 用例ID | 测试场景 | 预期结果 | 实际结果 | 测试状态 |
 |--------|---------|---------|---------|----------|
-| TC-HIST-101 | POST 新增对话 | 返回 `{success: true, data: {id, createTime}}` | - | - |
-| TC-HIST-102 | POST 缺少 question 参数 | 返回 `{success: false, error: "question 为必填"}` | - | - |
-| TC-HIST-103 | POST 缺少 answer 参数 | 返回 `{success: false, error: "answer 为必填"}` | - | - |
-| TC-HIST-104 | POST 参数类型错误 | 返回参数类型错误提示 | - | - |
-| TC-HIST-105 | GET 查询所有历史 | 返回历史列表，按 createTime 倒序 | - | - |
-| TC-HIST-106 | GET 空数据库 | 返回 `{success: true, data: []}` | - | - |
-| TC-HIST-107 | DELETE 清空历史 | 返回 `{success: true}`，历史列表为空 | - | - |
-| TC-HIST-108 | DELETE 后 GET | 返回空数组 | - | - |
-| TC-HIST-109 | 新增后立即 GET | 新增的对话在列表中 | - | - |
-| TC-HIST-110 | GET /api/history/:id 存在记录 | 返回单条对话详情 | - | - |
-| TC-HIST-111 | GET /api/history/:id 不存在 | 返回 `{success: false, error: "记录不存在"}` | - | - |
-| TC-HIST-112 | 并发新增多个对话 | 每个都有唯一 id | - | - |
-| TC-HIST-113 | 重启服务后 GET | 数据已清空（内存存储） | - | - |
+| TC-HIST-101 | POST 新增对话 | 返回 `{success: true, data: {id, createTime}}` | `{success:true,data:{id:"d89ed038...",createTime:"2026-03-30T09:15:57.801Z"}}` | ✅ PASS |
+| TC-HIST-102 | POST 缺少 question 参数 | 返回 `{success: false, error: "question 为必填"}` | `{success:false,data:null,error:"question 为必填参数"}` | ✅ PASS |
+| TC-HIST-103 | POST 缺少 answer 参数 | 返回 `{success: false, error: "answer 为必填"}` | `{success:false,data:null,error:"answer 为必填参数"}` | ✅ PASS |
+| TC-HIST-104 | POST 参数类型错误 | 返回参数类型错误提示 | `{success:false,data:null,error:"question 为必填参数"}` | ✅ PASS |
+| TC-HIST-105 | GET 查询所有历史 | 返回历史列表，按 createTime 倒序 | 返回列表，按时间倒序排列 | ✅ PASS |
+| TC-HIST-106 | GET 空数据库 | 返回 `{success: true, data: []}` | `{success:true,"data":[]}` | ✅ PASS |
+| TC-HIST-107 | DELETE 清空历史 | 返回 `{success: true}`，历史列表为空 | `{success:true,data:null}` | ✅ PASS |
+| TC-HIST-108 | DELETE 后 GET | 返回空数组 | `{success:true,"data":[]}` | ✅ PASS |
+| TC-HIST-109 | 新增后立即 GET | 新增的对话在列表中 | 对话出现在列表中 | ✅ PASS |
+| TC-HIST-110 | GET /api/history/:id 存在记录 | 返回单条对话详情 | 返回完整对话详情 | ✅ PASS |
+| TC-HIST-111 | GET /api/history/:id 不存在 | 返回 `{success: false, error: "记录不存在"}` | `{success:false,data:null,error:"记录不存在"}` | ✅ PASS |
+| TC-HIST-112 | 并发新增多个对话 | 每个都有唯一 id | 3个不同UUID | ✅ PASS |
+| TC-HIST-113 | 重启服务后 GET | 数据已清空（内存存储） | `{success:true,"data":[]}` | ✅ PASS |
 
 ### 问题清单
 
