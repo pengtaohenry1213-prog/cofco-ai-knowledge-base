@@ -105,7 +105,7 @@
 | step2 | ✅ 完成 | Frontend（UI） | - | doc/plans/step2-plan.md | - |
 | step3 | ✅ 完成 | Frontend（UI） | - | doc/plans/step3-plan.md | - |
 | step4 | ✅ 完成 | Frontend | - | doc/plans/step4-plan.md | - |
-| step5 | ✅ 完成 | Frontend（UI） | - | doc/plans/step5-plan.md | - |
+| step5 | ✅ 完成 | Frontend（UI） | - | doc/plans/step5-plan.md | 2026-03-30 |
 | step12 | ✅ 完成 | Frontend（集成） | - | doc/plans/step12-plan.md | 2026-03-30 |
 | step15 | ⬜ 待开始 | Backend | - | - | - |
 | step16 | ⬜ 待开始 | Backend | - | - | - |
