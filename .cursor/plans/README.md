@@ -49,47 +49,57 @@ acceptance:
 
 ## 执行日志
 
-### 10:00 - [agent: fast]
+### HH:MM - [agent: xxx]
 
-**操作**: 定义类型接口
+**操作**: 简要描述
+**文件**: affected files
+**命令**: shell commands
+**输出**: command output
+**结果**: 完成/失败/跳过
+**备注**: 关键发现
 
-**执行**:
-- 读取文件: packages/frontend/src/utils/request.ts
-- 新增 StreamResponse、StreamCallbacks、StreamRequestConfig 接口
+## 🧪 测试报告
 
-**结果**: 完成
+### 测试环境
 
-### 10:01 - [agent: default]
+| 项目 | 值 |
+|------|-----|
+| 测试时间 | YYYY-MM-DD HH:MM |
+| 测试人员 | Agent |
+| 测试类型 | 实测验证 |
 
-**操作**: 实现 fetchStream 函数
+### 测试执行记录
 
-**执行**:
-```ts
-// 读取 packages/frontend/src/utils/request.ts
-// 新增 fetchStream 函数
-```
+#### TC-XXX: [测试场景]
 
-**结果**: 完成
-
-### 10:02 - [agent: default]
-
-**操作**: 验证类型检查
-
-**执行**:
+**命令**:
 ```bash
-cd packages/frontend && ./node_modules/.bin/tsc --noEmit
+curl -X POST http://localhost:3000/api/xxx ...
 ```
 
-**输出**: 无错误
-
-**结果**: 通过
-
-### 10:03 - [agent: default]
-
-**操作**: 所有 todos 完成
-
-**结果**: 完成
+**预期结果**:
+```json
+{"success": true, ...}
 ```
+
+**实际结果**:
+```json
+{"success": true, ...}
+```
+
+**状态**: ✅ PASS / ❌ FAIL
+
+### 测试汇总
+
+| 用例ID | 测试场景 | 状态 | 备注 |
+|--------|---------|------|------|
+| TC-001 | xxx | ✅ PASS | - |
+| TC-002 | xxx | ❌ FAIL | 原因: xxx |
+
+**总计**: X 通过 / Y 失败 / Z 跳过
+```
+
+---
 
 ## 详细执行日志格式说明
 
@@ -132,3 +142,14 @@ cd packages/frontend && ./node_modules/.bin/tsc --noEmit
 - 所有 `.cursor/plans/` 下的 plan 文件执行日志必须使用上述详细格式
 - 日志按时间顺序记录，每步包含：时间、操作、执行内容（文件/命令）、结果
 - 所有 `.cursor/plans/` 下的 plan 文件执行日志必须使用上述详细格式，并保存到 `doc/steps/plans/` 或删除
+
+## 测试强制约定
+
+1. **必须执行实测测试** - 不能只填写"✓"或"通过"，必须有实际执行的命令和输出
+2. **测试报告必须完整** - Plan 文件必须包含 `## 🧪 测试报告` section
+3. **每个用例都要验证** - step.md 中的每个测试用例都必须实际执行
+4. **失败必须记录** - FAIL 的用例必须说明原因
+5. **测试报告内容要求**：
+   - 测试环境（时间、人员、类型）
+   - 每个用例的执行命令、预期结果、实际结果、状态
+   - 测试汇总表格

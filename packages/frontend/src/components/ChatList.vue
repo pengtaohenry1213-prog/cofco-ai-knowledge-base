@@ -16,7 +16,7 @@
       >
         <div class="message-avatar">
           <el-icon v-if="item.role === 'user'"><User /></el-icon>
-          <el-icon v-else><Robot /></el-icon>
+          <el-icon v-else><Service /></el-icon>
         </div>
         <div class="message-bubble">
           <div class="message-content" v-html="formatContent(item.content)"></div>
@@ -39,7 +39,7 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
-import { ChatDotRound, User, Robot } from '@element-plus/icons-vue';
+import { ChatDotRound, User, Service } from '@element-plus/icons-vue';
 import type { ChatListProps, ChatItem } from '@/types/chat';
 
 const props = withDefaults(defineProps<ChatListProps>(), {

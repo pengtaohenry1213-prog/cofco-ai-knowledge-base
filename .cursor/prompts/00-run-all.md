@@ -61,8 +61,7 @@
   * 每个 todo 完成后提交, 必须判断是否有未提交变更，避免重复提交空 commit。
   * commit message 保留 type + step + todo-id
     * 确保依赖顺序在 Git 历史里体现
-* 更新 doc/steps-dev.md 中对应 step 的状态，更新角色、完成日期、Plan 文件、验收结果
-* 移动 Plan 文件 `.cursor/plans/stepN-plan.md` 到 `doc/plans/stepN-plan.md`
+
 
 #### 📌 分派规则
 
@@ -110,6 +109,16 @@ todos:
 * 运行测试
 * 验证功能
 
+**⚠️ 强制要求：必须执行实测测试并生成报告**
+
+- 根据 step.md 中的测试用例表，逐个执行实测测试
+- 每个用例必须执行实际命令（curl、npm test 等）
+- 将测试报告写入 Plan 文件的 `## 🧪 测试报告` section
+- 测试报告必须包含：
+  - 测试环境（时间、人员、类型）
+  - 每个用例的执行命令、预期结果、实际结果、状态
+  - 测试汇总表格
+
 > Git 提交由上面统一规则控制，不需要在这里重复提交
 
 ---
@@ -117,7 +126,7 @@ todos:
 ### 4️⃣ Reviewer Agent
 
 * 审查所有变更
-* 对照 acceptance 验收
+* 对照 acceptance 验收3
 * 检查是否全部完成
 * 如果有失败 → 回到对应 Agent 修复，继续执行
 
@@ -161,6 +170,8 @@ git commit -m "feat(stepN): 全部完成 + 验收通过"
 * 所有 todo 必须完成
 * 每个 todo 必须独立 commit
 * commit 信息必须包含 stepN 和 todo-id
+* **测试必须实测**：必须有实际执行的命令和输出，不允许只填"✓"或"通过"
+* **测试报告必须写入 Plan 文件**：Plan 文件必须包含 `## 🧪 测试报告` section
 
 ---
 
