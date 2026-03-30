@@ -7,6 +7,27 @@ export interface ResponseData<T = unknown> {
   message: string;
 }
 
+// ==================== Stream Request Types ====================
+
+export interface StreamResponse {
+  content?: string;
+  done?: boolean;
+  error?: string;
+}
+
+export interface StreamCallbacks {
+  onChunk: (text: string, done: boolean) => void;
+  onFinish: () => void;
+  onError: (error: Error) => void;
+}
+
+export interface StreamRequestConfig {
+  url: string;
+  params: Record<string, unknown>;
+  callbacks: StreamCallbacks;
+  signal?: AbortSignal;
+}
+
 const service: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 30000,
@@ -90,3 +111,97 @@ export const request = {
     });
   }
 };
+
+export function streamPost(
+  params: Record<string, unknown>,
+  callbacks: StreamCallbacks,
+  signal?: AbortSignal
+): void {
+  const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+  const url = `${baseURL}/chat/stream`;
+  
+  fetchStream({
+    url,
+    params,
+    callbacks,
+    signal
+  });
+}
+
+export async function fetchStream(config: StreamRequestConfig): Promise<void> {
+  const { url, params, callbacks, signal } = config;
+  const { onChunk, onFinish, onError } = callbacks;
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`
+      },
+      body: JSON.stringify(params),
+      signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+
+    const reader = response.body.getReader();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) {
+        if (buffer.trim()) {
+          try {
+            const data: StreamResponse = JSON.parse(buffer);
+            onChunk(data.content || '', true);
+          } catch {
+            // ignore parse error for last chunk
+          }
+        }
+        onFinish();
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed === 'data: [DONE]') continue;
+        
+        if (trimmed.startsWith('data: ')) {
+          const jsonStr = trimmed.slice(6);
+          try {
+            const data: StreamResponse = JSON.parse(jsonStr);
+            if (data.content !== undefined) {
+              onChunk(data.content, !!data.done);
+            }
+            if (data.done) {
+              onFinish();
+              reader.cancel();
+              return;
+            }
+          } catch {
+            // skip invalid JSON lines
+          }
+        }
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      onFinish();
+    } else {
+      onError(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+}
