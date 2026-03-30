@@ -110,7 +110,7 @@
 | step15 | ✅ 完成 | Backend | - | doc/plans/step15-plan.md | 2026-03-30 |
 | step16 | ✅ 完成 | Backend | - | doc/plans/step16-plan.md | 2026-03-30 |
 | step17 | ✅ 完成 | Backend | - | doc/plans/step17-plan.md | 2026-03-30 |
-| step18 | ⬜ 待开始 | Backend | - | - | - |
+| step18 | ✅ 完成 | Backend | - | doc/plans/step18-plan.md | 2026-03-30 |
 | step19 | ⬜ 待开始 | Backend | - | - | - |
 | step20 | ⬜ 待开始 | Backend | - | - | - |
 

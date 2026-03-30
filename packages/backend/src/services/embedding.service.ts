@@ -7,6 +7,11 @@ import {
 } from '../types/embedding.types';
 import { config } from '../config';
 
+/** 豆包 Embedding API 端点 */
+const EMBEDDING_ENDPOINT = '/embeddings/text-embedding';
+/** 豆包 Embedding 模型名称 */
+const EMBEDDING_MODEL = 'doubao-embedding-v1';
+
 /** 默认分块参数 */
 const DEFAULT_CHUNK_SIZE = 500;
 const DEFAULT_OVERLAP = 100;
@@ -135,7 +140,7 @@ export async function createEmbedding(text: string): Promise<EmbeddingResult> {
     return { success: false, error: '文本内容为空' };
   }
 
-  const endpoint = `${config.doubao.baseUrl}/embeddings`;
+  const endpoint = `${config.doubao.baseUrl}${EMBEDDING_ENDPOINT}`;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -150,8 +155,8 @@ export async function createEmbedding(text: string): Promise<EmbeddingResult> {
           'Authorization': `Bearer ${config.doubao.apiKey}`
         },
         body: JSON.stringify({
-          model: 'embedding-v1',
-          input: text
+          model: EMBEDDING_MODEL,
+          input: [text]
         }),
         signal: controller.signal
       });
