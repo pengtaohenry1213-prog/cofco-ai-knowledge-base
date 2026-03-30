@@ -44,7 +44,7 @@ export async function chatWithDocument(
     };
   }
 
-  const relevantChunks = retrievalResult.data || [];
+  const relevantChunks = retrievalResult.chunks || [];
 
   // 无相关文档时返回提示
   if (relevantChunks.length === 0) {

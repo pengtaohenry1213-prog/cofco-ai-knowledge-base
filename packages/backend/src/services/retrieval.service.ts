@@ -5,7 +5,7 @@ import { createEmbedding } from './embedding.service';
 /** 检索结果 */
 export interface RetrievalResult {
   success: boolean;
-  data?: string[];
+  chunks?: string[];
   error?: string;
 }
 
@@ -64,6 +64,6 @@ export async function searchTopK(
   // 返回文本块数组
   return {
     success: true,
-    data: topKResults.map((r) => r.content)
+    chunks: topKResults.map((r) => r.content)
   };
 }

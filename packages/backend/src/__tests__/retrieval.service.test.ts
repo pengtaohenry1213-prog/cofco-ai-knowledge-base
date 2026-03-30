@@ -54,7 +54,7 @@ describe('searchTopK', () => {
     const result = await searchTopK('测试问题', 2);
 
     expect(result.success).toBe(true);
-    expect(result.data).toHaveLength(2);
+    expect(result.chunks).toHaveLength(2);
   });
 
   // TC-RET-002: k=1 时返回 1 个结果
@@ -78,7 +78,7 @@ describe('searchTopK', () => {
     const result = await searchTopK('测试问题', 1);
 
     expect(result.success).toBe(true);
-    expect(result.data).toHaveLength(1);
+    expect(result.chunks).toHaveLength(1);
   });
 
   // k < 1 时返回错误
@@ -118,7 +118,7 @@ describe('searchTopK', () => {
     const result = await searchTopK('测试问题', 10);
 
     expect(result.success).toBe(true);
-    expect(result.data).toHaveLength(2);
+    expect(result.chunks).toHaveLength(2);
   });
 
   // 返回结果按相似度降序排列
@@ -142,9 +142,9 @@ describe('searchTopK', () => {
     const result = await searchTopK('测试问题', 3);
 
     expect(result.success).toBe(true);
-    expect(result.data![0]).toBe('高相似度');
-    expect(result.data![1]).toBe('中等相似度');
-    expect(result.data![2]).toBe('低相似度');
+    expect(result.chunks![0]).toBe('高相似度');
+    expect(result.chunks![1]).toBe('中等相似度');
+    expect(result.chunks![2]).toBe('低相似度');
   });
 
   // 获取向量失败时返回错误
