@@ -112,7 +112,7 @@
 | step17 | ✅ 完成 | Backend | - | doc/plans/step17-plan.md | 2026-03-30 |
 | step18 | ✅ 完成 | Backend | - | doc/plans/step18-plan.md | 2026-03-30 |
 | step19 | ✅ 完成 | Backend | - | doc/plans/step19-plan.md | 2026-03-30 |
-| step20 | ⬜ 待开始 | Backend | - | - | - |
+| step20 | ✅ 完成 | Backend | - | doc/plans/step20-plan.md | 2026-03-30 |
 
 > 状态说明：✅ 已完成、🔄 进行中、⬜ 待开始。执行完一个 step 后更新此表。
 >

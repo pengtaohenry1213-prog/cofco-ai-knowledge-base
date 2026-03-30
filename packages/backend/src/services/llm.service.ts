@@ -4,6 +4,27 @@
  */
 import { config } from '../config';
 
+/** 对话 API 请求参数 */
+export interface ChatRequest {
+  prompt: string;
+  stream?: boolean;
+}
+
+/** 对话 API 响应 */
+export interface ChatResponse {
+  success: boolean;
+  data?: {
+    answer: string;
+  };
+  error?: string;
+}
+
+/** 流式响应块 */
+export interface StreamChunk {
+  chunk: string;
+  finish: boolean;
+}
+
 /** LLM API 调用结果 */
 export interface LLMResult {
   success: boolean;
