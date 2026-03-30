@@ -5,37 +5,13 @@
       <p class="description">基于知识库的智能问答助手</p>
     </div>
 
-    <div class="chat-messages" ref="messagesContainer">
-      <div v-if="messages.length === 0" class="empty-state">
-        <el-icon class="empty-icon"><ChatDotRound /></el-icon>
-        <p>开始向 AI 助手提问吧</p>
-      </div>
-      <div
-        v-for="(msg, index) in messages"
-        :key="index"
-        class="message"
-        :class="msg.role"
-      >
-        <div class="message-avatar">
-          <el-icon v-if="msg.role === 'user'"><User /></el-icon>
-          <el-icon v-else><Robot /></el-icon>
-        </div>
-        <div class="message-content">
-          <div class="message-text" v-html="formatMessage(msg.content)"></div>
-          <div class="message-time">{{ msg.time }}</div>
-        </div>
-      </div>
-      <div v-if="loading" class="message assistant">
-        <div class="message-avatar">
-          <el-icon><Robot /></el-icon>
-        </div>
-        <div class="message-content">
-          <div class="message-text typing">
-            <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ChatList
+      :messages="chatMessages"
+      :loading="isTyping"
+      :disabled="loading"
+      empty-text="开始向 AI 助手提问吧"
+      @scroll-to-bottom="handleScrollToBottom"
+    />
 
     <div class="chat-input-area">
       <el-input
@@ -49,83 +25,145 @@
       <el-button
         type="primary"
         :loading="loading"
-        :disabled="!userInput.trim()"
+        :disabled="!userInput.trim() || loading"
         @click="handleSend"
       >
-        发送
+        {{ loading ? '思考中...' : '发送' }}
       </el-button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, shallowRef, onUnmounted } from 'vue';
 import { ElMessage } from 'element-plus';
-import { ChatDotRound, User, Robot } from '@element-plus/icons-vue';
-import { request } from '@/utils/request';
+import ChatList from '@/components/ChatList.vue';
+import type { ChatItem } from '@/types/chat';
+import { streamPost } from '@/utils/request';
+import type { StreamCallbacks } from '@/utils/request';
+import { createTypingEffect } from '@/utils/typingEffect';
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-  time: string;
-}
-
-const messagesContainer = ref<HTMLElement | null>(null);
 const userInput = ref('');
 const loading = ref(false);
-const messages = ref<Message[]>([]);
+const isTyping = ref(false);
+const chatMessages = shallowRef<ChatItem[]>([]);
+let typingInstance: ReturnType<typeof createTypingEffect> | null = null;
+let abortController: AbortController | null = null;
 
-const scrollToBottom = async () => {
-  await nextTick();
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-  }
-};
-
-const formatMessage = (content: string): string => {
-  return content
-    .replace(/\n/g, '<br>')
-    .replace(/`(.*?)`/g, '<code>$1</code>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+const handleScrollToBottom = () => {
+  // ChatList handles its own scrolling internally
 };
 
 const handleSend = async () => {
   if (!userInput.value.trim() || loading.value) return;
 
-  const userMessage: Message = {
+  const userMessage: ChatItem = {
+    id: Date.now().toString(),
     role: 'user',
     content: userInput.value.trim(),
     time: new Date().toLocaleString('zh-CN')
   };
 
-  messages.value.push(userMessage);
+  chatMessages.value = [...chatMessages.value, userMessage];
   userInput.value = '';
   loading.value = true;
-  await scrollToBottom();
+  isTyping.value = true;
+
+  abortController = new AbortController();
+
+  const assistantMessage: ChatItem = {
+    id: (Date.now() + 1).toString(),
+    role: 'assistant',
+    content: '',
+    time: new Date().toLocaleString('zh-CN')
+  };
+  chatMessages.value = [...chatMessages.value, assistantMessage];
+
+  const callbacks: StreamCallbacks = {
+    onChunk: (text: string, done: boolean) => {
+      typingInstance?.stop();
+
+      const lastMessage = chatMessages.value[chatMessages.value.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        chatMessages.value = [
+          ...chatMessages.value.slice(0, -1),
+          { ...lastMessage, content: lastMessage.content + text }
+        ];
+      }
+
+      if (!done) {
+        startTypingEffect();
+      }
+    },
+    onFinish: () => {
+      isTyping.value = false;
+      typingInstance?.stop();
+    },
+    onError: (error: Error) => {
+      ElMessage.error('发送消息失败，请稍后重试');
+      console.error(error);
+      isTyping.value = false;
+      loading.value = false;
+
+      const lastMessage = chatMessages.value[chatMessages.value.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        chatMessages.value = [
+          ...chatMessages.value.slice(0, -1),
+          { ...lastMessage, content: lastMessage.content || '抱歉，发生了错误。' }
+        ];
+      }
+    }
+  };
+
+  const params = {
+    message: userMessage.content,
+    history: chatMessages.value.slice(-10, -1).map(m => ({
+      role: m.role,
+      content: m.content
+    }))
+  };
+
+  const startTypingEffect = () => {
+    const lastMessage = chatMessages.value[chatMessages.value.length - 1];
+    if (lastMessage && lastMessage.role === 'assistant') {
+      const originalContent = lastMessage.content;
+
+      typingInstance = createTypingEffect('', {
+        speed: 15,
+        onChar: (char: string, fullText: string) => {
+          const currentMsg = chatMessages.value[chatMessages.value.length - 1];
+          if (currentMsg && currentMsg.id === lastMessage.id) {
+            chatMessages.value = [
+              ...chatMessages.value.slice(0, -1),
+              { ...currentMsg, content: originalContent + fullText }
+            ];
+          }
+        }
+      });
+    }
+  };
 
   try {
-    const response = await request.post<{ answer: string }>('/chat/stream', {
-      message: userMessage.content,
-      history: messages.value.slice(-10).map(m => ({
-        role: m.role,
-        content: m.content
-      }))
+    await new Promise<void>((resolve) => {
+      streamPost(params, callbacks, abortController!.signal);
+      const checkDone = setInterval(() => {
+        if (!loading.value) {
+          clearInterval(checkDone);
+          resolve();
+        }
+      }, 100);
     });
-
-    const assistantMessage: Message = {
-      role: 'assistant',
-      content: response.data.data.answer,
-      time: new Date().toLocaleString('zh-CN')
-    };
-    messages.value.push(assistantMessage);
-  } catch (error) {
-    ElMessage.error('发送消息失败，请稍后重试');
-    console.error(error);
   } finally {
     loading.value = false;
-    await scrollToBottom();
+    isTyping.value = false;
+    typingInstance?.stop();
   }
 };
+
+onUnmounted(() => {
+  typingInstance?.stop();
+  abortController?.abort();
+});
 </script>
 
 <style scoped>
@@ -154,125 +192,14 @@ const handleSend = async () => {
   margin: 0;
 }
 
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  background: #f5f7fa;
-  border-radius: 12px;
-  margin-bottom: 16px;
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #909399;
-}
-
-.empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
-}
-
-.message {
-  display: flex;
-  margin-bottom: 20px;
-}
-
-.message.user {
-  flex-direction: row-reverse;
-}
-
-.message-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.user .message-avatar {
-  background: #409eff;
-  color: #fff;
-}
-
-.assistant .message-avatar {
-  background: #67c23a;
-  color: #fff;
-}
-
-.message-content {
-  max-width: 70%;
-  margin: 0 12px;
-}
-
-.user .message-content {
-  text-align: right;
-}
-
-.message-text {
-  padding: 12px 16px;
-  border-radius: 12px;
-  line-height: 1.6;
-  word-break: break-word;
-}
-
-.user .message-text {
-  background: #409eff;
-  color: #fff;
-}
-
-.assistant .message-text {
-  background: #fff;
-  color: #303133;
-}
-
-.message-text :deep(code) {
-  background: #f0f0f0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: monospace;
-}
-
-.message-text :deep(strong) {
-  font-weight: 600;
-}
-
-.message-time {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 4px;
-}
-
-.typing .dot {
-  animation: blink 1.4s infinite;
-}
-
-.typing .dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing .dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes blink {
-  0%, 60%, 100% { opacity: 0; }
-  30% { opacity: 1; }
-}
-
 .chat-input-area {
   display: flex;
   gap: 12px;
   align-items: flex-end;
+  margin-top: 16px;
 }
 
-.chat-input-area .el-textarea {
+.chat-input-area :deep(.el-textarea) {
   flex: 1;
 }
 
