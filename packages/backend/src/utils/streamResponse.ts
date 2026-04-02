@@ -43,7 +43,7 @@ export function setupStreamResponse(
       return;
     }
 
-    const data = JSON.stringify({ chunk, finish });
+    const data = JSON.stringify({ content: chunk, done: finish });
     res.write(`${data}\n`);
   }
 
@@ -70,7 +70,7 @@ export function sendStreamError(res: Response, error: string): void {
     return;
   }
 
-  const data = JSON.stringify({ error, finish: true });
+  const data = JSON.stringify({ error, done: true });
   res.write(`${data}\n`);
   res.end();
 }

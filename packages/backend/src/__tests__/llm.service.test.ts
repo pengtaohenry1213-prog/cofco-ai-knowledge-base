@@ -22,6 +22,7 @@ describe('chatCompletion (非流式对话)', () => {
   // TC-CHAT-SVC-001: 非流式对话成功
   it('TC-CHAT-SVC-001: 非流式对话成功返回完整回答', async () => {
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 0,
@@ -101,6 +102,7 @@ describe('chatCompletion (非流式对话)', () => {
         setTimeout(() => reject(new DOMException('Aborted', 'AbortError')), 100);
       }))
       .mockResolvedValueOnce({
+        status: 200,
         ok: true,
         json: async () => ({
           code: 0,
@@ -122,6 +124,7 @@ describe('chatCompletion (非流式对话)', () => {
   // TC-CHAT-SVC-011: 模型名称配置正确
   it('TC-CHAT-SVC-011: 使用配置中的模型名称', async () => {
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 0,
@@ -145,6 +148,7 @@ describe('chatCompletion (非流式对话)', () => {
   // TC-CHAT-SVC-012: 消息格式正确
   it('TC-CHAT-SVC-012: 消息格式为 messages: [{role: "user", content: "..."}]', async () => {
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 0,
@@ -196,6 +200,7 @@ describe('chatCompletionStream (流式对话)', () => {
     });
 
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       body: stream
     });
@@ -223,6 +228,7 @@ describe('chatCompletionStream (流式对话)', () => {
     });
 
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       body: stream
     });
@@ -247,6 +253,7 @@ describe('chatCompletionStream (流式对话)', () => {
     });
 
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       body: stream
     });
@@ -297,6 +304,7 @@ describe('chatCompletionStream (流式对话)', () => {
   // 响应体为空
   it('流式对话响应体为空时调用 onError', async () => {
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       body: null
     });
@@ -320,6 +328,7 @@ describe('chatCompletionStream (流式对话)', () => {
     });
 
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       body: stream
     });

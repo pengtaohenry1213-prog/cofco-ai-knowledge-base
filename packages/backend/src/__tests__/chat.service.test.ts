@@ -66,18 +66,17 @@ describe('chatWithDocument', () => {
       })
     });
 
-    // Mock chat completion API
+    // Mock chat completion API（豆包 ARK：顶层 choices）
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        code: 0,
-        data: {
-          choices: [{
+        choices: [
+          {
             message: {
               content: '机器学习是人工智能的一个分支。'
             }
-          }]
-        }
+          }
+        ]
       })
     });
 
@@ -206,14 +205,13 @@ describe('chatWithDocument', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        code: 0,
-        data: {
-          choices: [{
+        choices: [
+          {
             message: {
               content: '人工智能是一个广泛的领域...'
             }
-          }]
-        }
+          }
+        ]
       })
     });
 

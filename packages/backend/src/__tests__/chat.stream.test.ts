@@ -151,8 +151,8 @@ describe('setupStreamResponse', () => {
     stream.writeChunk('，世界', true);
 
     expect(mockRes.write).toHaveBeenCalledTimes(2);
-    expect(mockRes.write).toHaveBeenNthCalledWith(1, '{"chunk":"你好","finish":false}\n');
-    expect(mockRes.write).toHaveBeenNthCalledWith(2, '{"chunk":"，世界","finish":true}\n');
+    expect(mockRes.write).toHaveBeenNthCalledWith(1, '{"content":"你好","done":false}\n');
+    expect(mockRes.write).toHaveBeenNthCalledWith(2, '{"content":"，世界","done":true}\n');
   });
 
   it('TC-STREAM-106: 最后一行 finish=true', () => {
@@ -169,7 +169,7 @@ describe('setupStreamResponse', () => {
 
     stream.writeChunk('', true);
 
-    expect(mockRes.write).toHaveBeenCalledWith('{"chunk":"","finish":true}\n');
+    expect(mockRes.write).toHaveBeenCalledWith('{"content":"","done":true}\n');
   });
 
   it('TC-STREAM-108: 客户端断开时不写入', () => {
@@ -216,7 +216,7 @@ describe('sendStreamError', () => {
 
     sendStreamError(mockRes, '测试错误');
 
-    expect(mockRes.write).toHaveBeenCalledWith('{"error":"测试错误","finish":true}\n');
+    expect(mockRes.write).toHaveBeenCalledWith('{"error":"测试错误","done":true}\n');
     expect(mockRes.end).toHaveBeenCalled();
   });
 

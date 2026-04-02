@@ -34,13 +34,20 @@ export interface EmbeddingResult {
 
 /** 豆包 Embedding API 完整响应 */
 export interface DoubaoEmbeddingResponse {
+  id?: string;
+  object?: string;
+  created?: number;
+  model?: string;
   code?: number;
   msg?: string;
-  data?: {
-    embeddings?: Array<{
-      embedding: number[];
-      index: number;
-    }>;
+  data?: Array<{
+    object?: string;
+    embedding: number[];
+    index: number;
+  }>;
+  usage?: {
+    prompt_tokens?: number;
+    total_tokens?: number;
   };
 }
 

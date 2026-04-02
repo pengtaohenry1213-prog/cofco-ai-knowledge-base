@@ -43,14 +43,25 @@ interface DoubaoChatRequest {
 
 /** 豆包对话 API 响应结构 */
 interface DoubaoChatResponse {
-  code: number;
-  msg: string;
-  data?: {
-    choices: Array<{
-      message: {
-        content: string;
-      };
-    }>;
+  id?: string;
+  code?: number;
+  msg?: string;
+  choices?: Array<{
+    finish_reason?: string;
+    index?: number;
+    message?: {
+      role?: string;
+      content?: string;
+      reasoning_content?: string;
+    };
+  }>;
+  created?: number;
+  model?: string;
+  object?: string;
+  usage?: {
+    completion_tokens?: number;
+    prompt_tokens?: number;
+    total_tokens?: number;
   };
 }
 
@@ -72,6 +83,9 @@ export async function chatCompletion(prompt: string): Promise<LLMResult> {
   }
 
   const endpoint = `${config.doubao.baseUrl}/chat/completions`;
+  console.log(`[LLM] 请求豆包 API: ${endpoint}`);
+  console.log(`[LLM] 模型: ${config.doubao.model}`);
+  console.log(`[LLM] Prompt 前100字: "${prompt.slice(0, 100)}..."`);
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -103,27 +117,40 @@ export async function chatCompletion(prompt: string): Promise<LLMResult> {
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => '');
+        console.log(`[LLM] ✗ HTTP 错误: ${response.status} ${response.statusText} - ${errorBody}`);
         return {
           success: false,
           error: `API 请求失败: ${response.status} ${response.statusText} ${errorBody}`.trim()
         };
       }
 
-      const data = (await response.json()) as DoubaoChatResponse;
+      const data = await response.json() as DoubaoChatResponse;
+      console.log(`[LLM] 响应 code=${data.code}，choices=${data.choices?.length}，content="${data.choices?.[0]?.message?.content?.slice(0, 80)}..."`);
+      console.log(`[LLM] 响应 reasoning_content="${data.choices?.[0]?.message?.reasoning_content?.slice(0, 80)}..."`);
 
+      // 豆包 ARK API 返回的响应没有 code 字段，需要检查 choices 是否存在
+      if (data.choices && data.choices.length > 0) {
+        const choice = data.choices[0].message;
+        const answer = choice?.content || choice?.reasoning_content || '';
+        if (answer) {
+          console.log(`[LLM] ✓ 成功获取回答，长度=${answer.length}`);
+          return { success: true, data: { answer } };
+        }
+        console.log(`[LLM] ✗ answer 为空`);
+        return { success: false, error: 'LLM 返回结果为空' };
+      }
+      
+      // 火山引擎 MaaS API 可能有 code 字段
       if (data.code !== 0 && data.code !== 200) {
+        console.log(`[LLM] ✗ API error: code=${data.code}, msg=${data.msg}`);
         return {
           success: false,
           error: data.msg || 'LLM API 返回错误'
         };
       }
 
-      const answer = data.data?.choices?.[0]?.message?.content;
-      if (!answer) {
-        return { success: false, error: 'LLM 返回结果为空' };
-      }
-
-      return { success: true, data: { answer } };
+      console.log(`[LLM] ✗ choices 不存在或为空`);
+      return { success: false, error: 'LLM 返回结果为空' };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
 
@@ -158,6 +185,10 @@ interface DoubaoStreamRequest {
 /**
  * 调用豆包流式对话 API，逐块处理响应
  *
+ * 注意：Seed 模型流式过程只返回 reasoning_content（思考过程），
+ * 真正回答在非流式响应中。为了提供更好的体验，
+ * 我们先调用非流式获取完整回答，再模拟流式返回。
+ *
  * @param prompt - 构造好的 Prompt
  * @param onChunk - 每块数据回调 (chunk: string) => void
  * @param onError - 错误回调 (error: string) => void
@@ -173,84 +204,22 @@ export async function chatCompletionStream(
     return;
   }
 
-  const endpoint = `${config.doubao.baseUrl}/chat/completions`;
-
   try {
-    const requestBody: DoubaoStreamRequest = {
-      model: config.doubao.model,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      stream: true
-    };
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.doubao.apiKey}`
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => '');
-      onError(`API 请求失败: ${response.status} ${response.statusText} ${errorBody}`.trim());
+    // 先调用非流式获取完整回答
+    const result = await chatCompletion(prompt);
+    if (!result.success || !result.data) {
+      onError(result.error || '获取回答失败');
       return;
     }
 
-    if (!response.body) {
-      onError('响应体为空');
-      return;
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-
-        if (done) {
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // 按行分割处理
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine || !trimmedLine.startsWith('data:')) {
-            continue;
-          }
-
-          const dataStr = trimmedLine.slice(5).trim();
-
-          // 跳过 [DONE] 标记
-          if (dataStr === '[DONE]') {
-            continue;
-          }
-
-          try {
-            const data = JSON.parse(dataStr);
-            const content = data.data?.choices?.[0]?.delta?.content;
-            if (content) {
-              onChunk(content);
-            }
-          } catch {
-            // 忽略解析错误，继续处理下一行
-          }
-        }
-      }
-    } finally {
-      reader.releaseLock();
+    // 模拟流式返回（逐字返回）
+    const answer = result.data.answer;
+    const chunkSize = 5; // 每批返回5个字符
+    for (let i = 0; i < answer.length; i += chunkSize) {
+      const chunk = answer.slice(i, i + chunkSize);
+      onChunk(chunk);
+      // 小延迟让前端能实时看到打字效果
+      await new Promise(resolve => setTimeout(resolve, 20));
     }
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);

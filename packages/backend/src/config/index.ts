@@ -1,11 +1,11 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import type { AppConfig, DoubaoConfig } from '../types/config.types';
+import type { AppConfig, DoubaoConfig, SiliconFlowConfig } from '../types/config.types';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const requiredConfig: string[] = ['DOUBAO_API_KEY'];
-const optionalConfig: string[] = ['PORT', 'DOUBAO_API_BASE_URL', 'DOUBAO_MODEL_NAME', 'NODE_ENV'];
+const optionalConfig: string[] = ['PORT', 'DOUBAO_API_BASE_URL', 'DOUBAO_MODEL_NAME', 'NODE_ENV', 'SILICONFLOW_API_KEY', 'SILICONFLOW_EMBEDDING_MODEL'];
 
 function getEnv(key: string, defaultValue?: string): string {
   return process.env[key] ?? defaultValue ?? '';
@@ -45,12 +45,27 @@ export function loadDoubaoConfig(): DoubaoConfig {
   };
 }
 
+export function loadSiliconFlowConfig(): SiliconFlowConfig | undefined {
+  const apiKey = getEnv('SILICONFLOW_API_KEY');
+  if (!apiKey) {
+    console.log('[Config] SILICONFLOW_API_KEY 未配置，将使用豆包 Embedding');
+    return undefined;
+  }
+  return {
+    apiKey,
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    model: getEnv('SILICONFLOW_EMBEDDING_MODEL', 'BAAI/bge-large-zh-v1.5'),
+  };
+}
+
 export function loadAppConfig(): AppConfig {
   const doubao = loadDoubaoConfig();
+  const siliconFlow = loadSiliconFlowConfig();
 
   return {
     port: getNumberEnv('PORT', 3000),
     doubao,
+    siliconFlow,
     env: getEnv('NODE_ENV', 'development'),
   };
 }

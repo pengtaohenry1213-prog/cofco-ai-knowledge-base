@@ -2,15 +2,14 @@ import {
   TextChunk,
   VectorItem,
   EmbeddingResult,
-  DoubaoEmbeddingResponse,
   ChunkOptions
 } from '../types/embedding.types';
 import { config } from '../config';
 
-/** 豆包 Embedding API 端点 */
-const EMBEDDING_ENDPOINT = '/embeddings/text-embedding';
-/** 豆包 Embedding 模型名称 */
-const EMBEDDING_MODEL = 'doubao-embedding-v1';
+/** SiliconFlow Embedding API 端点 */
+const EMBEDDING_ENDPOINT = '/embeddings';
+/** SiliconFlow Embedding 模型名称 */
+const EMBEDDING_MODEL = 'BAAI/bge-large-zh-v1.5';
 
 /** 默认分块参数 */
 const DEFAULT_CHUNK_SIZE = 500;
@@ -21,6 +20,26 @@ const API_TIMEOUT_MS = 10_000;
 
 /** 最大重试次数 */
 const MAX_RETRIES = 2;
+
+/**
+ * 获取当前使用的 embedding 配置
+ */
+function getEmbeddingConfig() {
+  if (config.siliconFlow?.apiKey) {
+    return {
+      endpoint: `${config.siliconFlow.baseUrl}${EMBEDDING_ENDPOINT}`,
+      apiKey: config.siliconFlow.apiKey,
+      model: config.siliconFlow.model,
+      provider: 'SiliconFlow'
+    };
+  }
+  return {
+    endpoint: `${config.doubao.baseUrl}/embeddings4`,
+    apiKey: config.doubao.apiKey,
+    model: 'doubao-embedding',
+    provider: 'Doubao'
+  };
+}
 
 /**
  * 将文本按句子拆分，返回句子数组
@@ -130,7 +149,8 @@ export function splitIntoChunks(
 }
 
 /**
- * 调用豆包 Embedding API，将文本转为向量
+ * 调用 Embedding API，将文本转为向量
+ * 支持 SiliconFlow 和豆包
  *
  * @param text - 待向量化的文本
  * @returns EmbeddingResult
@@ -140,7 +160,12 @@ export async function createEmbedding(text: string): Promise<EmbeddingResult> {
     return { success: false, error: '文本内容为空' };
   }
 
-  const endpoint = `${config.doubao.baseUrl}${EMBEDDING_ENDPOINT}`;
+  const embeddingConfig = getEmbeddingConfig();
+  console.log(`[Embedding] Provider: ${embeddingConfig.provider}`);
+  console.log(`[Embedding] 请求 endpoint: ${embeddingConfig.endpoint}`);
+  console.log(`[Embedding] 模型: ${embeddingConfig.model}`);
+  console.log(`[Embedding] 文本长度: ${text.length}`);
+
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -148,46 +173,53 @@ export async function createEmbedding(text: string): Promise<EmbeddingResult> {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(embeddingConfig.endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.doubao.apiKey}`
+          'Authorization': `Bearer ${embeddingConfig.apiKey}`
         },
         body: JSON.stringify({
-          model: EMBEDDING_MODEL,
+          model: embeddingConfig.model,
           input: [text]
         }),
         signal: controller.signal
       });
 
       clearTimeout(timeoutId);
+      console.log(`[Embedding] HTTP 状态: ${response.status}`);
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => '');
+        console.log(`[Embedding] ✗ 错误: ${errorBody}`);
         return {
           success: false,
           error: `API 请求失败: ${response.status} ${response.statusText} ${errorBody}`.trim()
         };
       }
 
-      const data = (await response.json()) as DoubaoEmbeddingResponse;
+      const data = await response.json() as { data?: Array<{ embedding: number[] }>; error?: { message: string } };
+      console.log(`[Embedding] 响应: ${JSON.stringify(data).slice(0, 200)}`);
 
-      if (data.code !== 0 && data.code !== 200) {
+      // SiliconFlow API 响应格式：{ data: [{ embedding: [...], index: 0 }] }
+      if (data.error) {
         return {
           success: false,
-          error: data.msg || 'Embedding API 返回错误'
+          error: data.error.message || 'Embedding API 返回错误'
         };
       }
 
-      const embedding = data.data?.embeddings?.[0]?.embedding;
+      const embedding = data.data?.[0]?.embedding;
       if (!embedding) {
+        console.log(`[Embedding] ✗ embedding 为空`);
         return { success: false, error: 'Embedding 返回结果为空' };
       }
+      console.log(`[Embedding] ✓ 成功，向量长度: ${embedding.length}`);
 
       return { success: true, data: embedding };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+      console.log(`[Embedding] ✗ 异常: ${lastError.message}`);
 
       // 如果是 AbortError（超时），继续重试
       if (lastError.name === 'AbortError' && attempt < MAX_RETRIES) {

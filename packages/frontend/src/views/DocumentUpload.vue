@@ -71,7 +71,7 @@ function goToChat() {
   }
 
   isRedirecting.value = true;
-  router.push('/chat');
+  router.push('/agent');
 }
 </script>
 
@@ -83,7 +83,7 @@ function goToChat() {
   padding: 24px;
   max-width: 1400px;
   margin: 0 auto;
-  min-height: calc(100vh - 120px);
+  min-height: calc(100vh - 48px);
 }
 
 @media (max-width: 1024px) {

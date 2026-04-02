@@ -3,23 +3,55 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/upload'
+    redirect: '/knowledge'
+  },
+  {
+    path: '/space',
+    name: 'MySpace',
+    component: () => import('@/views/DocumentUpload.vue'),
+    meta: {
+      title: '我的空间'
+    }
+  },
+  {
+    path: '/agent',
+    name: 'AgentChat',
+    component: () => import('@/views/IntelligentChat.vue'),
+    meta: {
+      title: '智能体'
+    }
+  },
+  {
+    path: '/knowledge',
+    name: 'KnowledgeBase',
+    component: () => import('@/views/KnowledgeBaseList.vue'),
+    meta: {
+      title: '知识库'
+    }
+  },
+  {
+    path: '/knowledge/new',
+    name: 'KnowledgeBaseNew',
+    component: () => import('@/views/KnowledgeBaseForm.vue'),
+    meta: {
+      title: '新建知识库'
+    }
+  },
+  {
+    path: '/knowledge/:id/edit',
+    name: 'KnowledgeBaseEdit',
+    component: () => import('@/views/KnowledgeBaseForm.vue'),
+    meta: {
+      title: '配置知识库'
+    }
   },
   {
     path: '/upload',
-    name: 'DocumentUpload',
-    component: () => import('@/views/DocumentUpload.vue'),
-    meta: {
-      title: '文档上传'
-    }
+    redirect: '/space'
   },
   {
     path: '/chat',
-    name: 'IntelligentChat',
-    component: () => import('@/views/IntelligentChat.vue'),
-    meta: {
-      title: '智能对话'
-    }
+    redirect: '/agent'
   }
 ];
 

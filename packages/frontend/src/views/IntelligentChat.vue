@@ -77,7 +77,7 @@ import { ref, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Document } from '@element-plus/icons-vue';
-import { request } from '@/utils/request';
+import { request, streamPost } from '@/utils/request';
 import ChatList from '@/components/ChatList.vue';
 import { useDocumentStore } from '@/store/modules/document';
 import type { ChatItem } from '@/types/chat';
@@ -96,7 +96,7 @@ const router = useRouter();
 const documentStore = useDocumentStore();
 
 const chatListRef = ref<InstanceType<typeof ChatList> | null>(null);
-const userInput = ref('');
+const userInput = ref('当前文本长度是什么？');
 const loading = ref(false);
 const messages = ref<Message[]>([]);
 const chatHistory = ref<ChatHistory[]>([]);
@@ -118,7 +118,7 @@ const formatMessage = (content: string): string => {
 };
 
 const goToUpload = () => {
-  router.push('/upload');
+  router.push('/space');
 };
 
 const handleSend = async () => {
@@ -136,29 +136,39 @@ const handleSend = async () => {
   loading.value = true;
   await scrollToBottom();
 
-  try {
-    const response = await request.post<{ answer: string }>('/chat/stream', {
-      message: userMessage.content,
-      history: messages.value.slice(-10).map(m => ({
-        role: m.role,
-        content: m.content
-      }))
-    });
+  // 创建助手消息占位
+  const assistantMessage: Message = {
+    id: `assistant-${Date.now()}`,
+    role: 'assistant',
+    content: '',
+    time: new Date().toLocaleString('zh-CN')
+  };
+  messages.value.push(assistantMessage);
 
-    const assistantMessage: Message = {
-      id: `assistant-${Date.now()}`,
-      role: 'assistant',
-      content: response.data.data.answer,
-      time: new Date().toLocaleString('zh-CN')
-    };
-    messages.value.push(assistantMessage);
-  } catch (error) {
-    ElMessage.error('发送消息失败，请稍后重试');
-    console.error(error);
-  } finally {
-    loading.value = false;
-    await scrollToBottom();
-  }
+  const abortController = new AbortController();
+
+  streamPost(
+    {
+      question: userMessage.content,
+      documentText: documentStore.documentText
+    },
+    {
+      onChunk: (text: string, done: boolean) => {
+        assistantMessage.content += text;
+        scrollToBottom();
+      },
+      onFinish: () => {
+        loading.value = false;
+      },
+      onError: (error: Error) => {
+        ElMessage.error('发送消息失败：' + error.message);
+        // 移除失败的助手消息
+        messages.value.pop();
+        loading.value = false;
+      }
+    },
+    abortController.signal
+  );
 };
 
 const loadChat = (index: number) => {
@@ -171,10 +181,11 @@ const loadChat = (index: number) => {
 .chat-view {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 60px);
+  min-height: 100vh;
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
+  box-sizing: border-box;
 }
 
 .chat-header {

@@ -10,33 +10,87 @@
 ## 📋 任务要求
 
 1. 页面整合：
-   * 文档上传页（UploadView.vue）：整合 FileUpload + TextPreview
-   * 智能对话页（ChatView.vue）：整合 ChatInput + ChatList + HistoryChatList
+   * 文档上传页（DocumentUpload.vue）：整合 FileUpload + TextPreview
+   * 智能对话页（IntelligentChat.vue）：整合 ChatList 组件
 2. 路由配置：
    * 配置路由跳转（上传成功后一键跳转到对话页）
    * App.vue 添加导航栏（仅“上传文档”“智能对话”按钮）
 3. 数据共享：
    * 通过Pinia存储上传的文本内容，页面切换数据不丢失
    * 对话页可读取Pinia中的文档文本，用于RAG对话
+4. **对话页 API 调用（关键）**：
+   * 调用流式对话接口 `POST /api/chat/stream`
+   * **必须使用 `streamPost` 函数**（基于 Fetch API 的流式请求，不是普通 request.post）
+   * 请求参数必须是 `{ question: string }`，**参数名必须是 `question`，不是 `message`**
+   * **不需要 `history` 参数**，后端不支持此参数
+   * 使用 `AbortController` 支持取消请求
 
 ## ⚠️ 强约束
 
 * 页面切换时数据仅内存级存储（不持久化）
 * 路由跳转逻辑清晰，有加载状态提示
 * 所有交互符合用户直觉（如上传成功后按钮跳转）
+* **API 调用参数名必须是 `question`，禁止使用 `message`**
+* **必须使用 `streamPost` 流式请求，禁止使用普通 `request.post`**
+* 创建助手消息占位符，实时更新 `content` 实现打字机效果
 
 ## 📤 输出格式
 
-### 文件1：src/views/UploadView.vue
+### 文件1：src/views/DocumentUpload.vue
 
 ```vue
 // 上传页面整合代码
 ```
 
-### 文件2：src/views/ChatView.vue
+### 文件2：src/views/IntelligentChat.vue
 
 ```vue
 // 对话页面整合代码
+// 关键：必须使用 streamPost，参数名必须是 question
+import { streamPost } from '@/utils/request';
+
+const handleSend = async () => {
+  // 创建用户消息
+  const userMessage: Message = {
+    id: `user-${Date.now()}`,
+    role: 'user',
+    content: userInput.value.trim(),
+    time: new Date().toLocaleString('zh-CN')
+  };
+  messages.value.push(userMessage);
+
+  // 创建助手消息占位符（用于流式更新）
+  const assistantMessage: Message = {
+    id: `assistant-${Date.now()}`,
+    role: 'assistant',
+    content: '',
+    time: new Date().toLocaleString('zh-CN')
+  };
+  messages.value.push(assistantMessage);
+
+  // 使用 AbortController 支持取消
+  const abortController = new AbortController();
+
+  // ⚠️ 关键：使用 streamPost，参数是 { question: ... }
+  streamPost(
+    { question: userMessage.content },
+    {
+      onChunk: (text: string, done: boolean) => {
+        assistantMessage.content += text;  // 实时追加文本
+        scrollToBottom();
+      },
+      onFinish: () => {
+        loading.value = false;
+      },
+      onError: (error: Error) => {
+        ElMessage.error('发送消息失败：' + error.message);
+        messages.value.pop();  // 移除失败的助手消息
+        loading.value = false;
+      }
+    },
+    abortController.signal
+  );
+};
 ```
 
 ### 文件3：src/App.vue
@@ -56,6 +110,9 @@
 * 不要省略页面空状态/加载状态
 * 不要硬编码路由路径
 * 不要忽略Pinia数据共享逻辑
+* **不要使用 `message` 作为 API 参数名，必须用 `question`**
+* **不要使用普通 `request.post` 调用流式接口，必须用 `streamPost`**
+* **不要发送 `history` 参数，后端不支持**
 
 ---
 

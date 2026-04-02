@@ -4,8 +4,17 @@ const MOCK_EMBEDDING_1 = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8];
 const MOCK_EMBEDDING_2 = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
 const MOCK_EMBEDDING_3 = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
 
-const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
+// 创建 mock 函数
+const mockGetAllVectors = vi.fn();
+const mockCreateEmbedding = vi.fn();
+
+// Mock the entire module
+vi.mock('../services/embedding.service', () => ({
+  createEmbedding: (...args: unknown[]) => mockCreateEmbedding(...args),
+  vectorStore: {
+    getAllVectors: () => mockGetAllVectors()
+  }
+}));
 
 describe('searchTopK', () => {
   const originalEnv = { ...process.env };
@@ -15,7 +24,7 @@ describe('searchTopK', () => {
     process.env = { ...originalEnv };
     process.env.DOUBAO_API_KEY = 'test-api-key';
     process.env.DOUBAO_API_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
-    mockFetch.mockReset();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -25,8 +34,13 @@ describe('searchTopK', () => {
 
   // TC-RET-004: 无文档时返回错误
   it('TC-RET-004: 无文档时返回错误', async () => {
-    const { searchTopK } = await import('../services/retrieval.service');
+    mockGetAllVectors.mockReturnValue([]);
+    mockCreateEmbedding.mockResolvedValue({
+      success: true,
+      data: MOCK_EMBEDDING_1
+    });
 
+    const { searchTopK } = await import('../services/retrieval.service');
     const result = await searchTopK('这是一个测试问题', 3);
 
     expect(result.success).toBe(false);
@@ -35,20 +49,15 @@ describe('searchTopK', () => {
 
   // TC-RET-001: 正常检索返回 TopK 结果
   it('TC-RET-001: 正常检索返回 TopK 结果', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        code: 0,
-        data: { embeddings: [{ embedding: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9], index: 0 }] }
-      })
-    });
-
-    const { vectorStore } = await import('../services/embedding.service');
-    vi.spyOn(vectorStore, 'getAllVectors').mockReturnValue([
+    mockGetAllVectors.mockReturnValue([
       { id: 'chunk-0', content: '文档内容1', embedding: MOCK_EMBEDDING_1 },
       { id: 'chunk-1', content: '文档内容2', embedding: MOCK_EMBEDDING_2 },
       { id: 'chunk-2', content: '文档内容3', embedding: MOCK_EMBEDDING_3 }
     ]);
+    mockCreateEmbedding.mockResolvedValue({
+      success: true,
+      data: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]
+    });
 
     const { searchTopK } = await import('../services/retrieval.service');
     const result = await searchTopK('测试问题', 2);
@@ -59,20 +68,15 @@ describe('searchTopK', () => {
 
   // TC-RET-002: k=1 时返回 1 个结果
   it('TC-RET-002: k=1 时返回1个结果', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        code: 0,
-        data: { embeddings: [{ embedding: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9], index: 0 }] }
-      })
-    });
-
-    const { vectorStore } = await import('../services/embedding.service');
-    vi.spyOn(vectorStore, 'getAllVectors').mockReturnValue([
+    mockGetAllVectors.mockReturnValue([
       { id: 'chunk-0', content: '文档内容1', embedding: MOCK_EMBEDDING_1 },
       { id: 'chunk-1', content: '文档内容2', embedding: MOCK_EMBEDDING_2 },
       { id: 'chunk-2', content: '文档内容3', embedding: MOCK_EMBEDDING_3 }
     ]);
+    mockCreateEmbedding.mockResolvedValue({
+      success: true,
+      data: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]
+    });
 
     const { searchTopK } = await import('../services/retrieval.service');
     const result = await searchTopK('测试问题', 1);
@@ -100,19 +104,14 @@ describe('searchTopK', () => {
 
   // 当 k 大于文档数量时，返回所有文档
   it('k大于文档数量时返回所有文档', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        code: 0,
-        data: { embeddings: [{ embedding: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9], index: 0 }] }
-      })
-    });
-
-    const { vectorStore } = await import('../services/embedding.service');
-    vi.spyOn(vectorStore, 'getAllVectors').mockReturnValue([
+    mockGetAllVectors.mockReturnValue([
       { id: 'chunk-0', content: '文档1', embedding: MOCK_EMBEDDING_1 },
       { id: 'chunk-1', content: '文档2', embedding: MOCK_EMBEDDING_2 }
     ]);
+    mockCreateEmbedding.mockResolvedValue({
+      success: true,
+      data: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]
+    });
 
     const { searchTopK } = await import('../services/retrieval.service');
     const result = await searchTopK('测试问题', 10);
@@ -123,20 +122,15 @@ describe('searchTopK', () => {
 
   // 返回结果按相似度降序排列
   it('返回结果按相似度降序排列', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        code: 0,
-        data: { embeddings: [{ embedding: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9], index: 0 }] }
-      })
-    });
-
-    const { vectorStore } = await import('../services/embedding.service');
-    vi.spyOn(vectorStore, 'getAllVectors').mockReturnValue([
+    mockGetAllVectors.mockReturnValue([
       { id: 'chunk-0', content: '低相似度', embedding: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1] },
       { id: 'chunk-1', content: '高相似度', embedding: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9] },
       { id: 'chunk-2', content: '中等相似度', embedding: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5] }
     ]);
+    mockCreateEmbedding.mockResolvedValue({
+      success: true,
+      data: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]
+    });
 
     const { searchTopK } = await import('../services/retrieval.service');
     const result = await searchTopK('测试问题', 3);
@@ -149,18 +143,13 @@ describe('searchTopK', () => {
 
   // 获取向量失败时返回错误
   it('获取问题向量失败时返回错误', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        code: 10001,
-        msg: 'invalid input'
-      })
-    });
-
-    const { vectorStore } = await import('../services/embedding.service');
-    vi.spyOn(vectorStore, 'getAllVectors').mockReturnValue([
+    mockGetAllVectors.mockReturnValue([
       { id: 'chunk-0', content: '文档1', embedding: MOCK_EMBEDDING_1 }
     ]);
+    mockCreateEmbedding.mockResolvedValue({
+      success: false,
+      error: 'invalid input'
+    });
 
     const { searchTopK } = await import('../services/retrieval.service');
     const result = await searchTopK('测试问题', 1);
@@ -172,18 +161,13 @@ describe('searchTopK', () => {
   // 配置校验在服务启动时执行（已在 index.ts 测试）
   // 此处验证正常情况下 API Key 校验通过
   it('正常配置下 API Key 校验通过', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        code: 0,
-        data: { embeddings: [{ embedding: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9], index: 0 }] }
-      })
-    });
-
-    const { vectorStore } = await import('../services/embedding.service');
-    vi.spyOn(vectorStore, 'getAllVectors').mockReturnValue([
+    mockGetAllVectors.mockReturnValue([
       { id: 'chunk-0', content: '文档1', embedding: MOCK_EMBEDDING_1 }
     ]);
+    mockCreateEmbedding.mockResolvedValue({
+      success: true,
+      data: [0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9]
+    });
 
     const { searchTopK } = await import('../services/retrieval.service');
     const result = await searchTopK('测试问题', 1);

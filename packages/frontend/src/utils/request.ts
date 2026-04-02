@@ -161,8 +161,12 @@ export async function fetchStream(config: StreamRequestConfig): Promise<void> {
       if (done) {
         if (buffer.trim()) {
           try {
-            const data: StreamResponse = JSON.parse(buffer);
-            onChunk(data.content || '', true);
+            const data: StreamResponse = JSON.parse(buffer.trim());
+            if (data.error) {
+              onError(new Error(data.error));
+            } else if (data.content !== undefined) {
+              onChunk(data.content, true);
+            }
           } catch {
             // ignore parse error for last chunk
           }
@@ -178,22 +182,34 @@ export async function fetchStream(config: StreamRequestConfig): Promise<void> {
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed || trimmed === 'data: [DONE]') continue;
-        
+
+        // 后端 writeChunk 为纯 JSON 行；SSE 标准格式为 data: {...}
+        let jsonStr: string | null = null;
         if (trimmed.startsWith('data: ')) {
-          const jsonStr = trimmed.slice(6);
-          try {
-            const data: StreamResponse = JSON.parse(jsonStr);
-            if (data.content !== undefined) {
-              onChunk(data.content, !!data.done);
-            }
-            if (data.done) {
-              onFinish();
-              reader.cancel();
-              return;
-            }
-          } catch {
-            // skip invalid JSON lines
+          jsonStr = trimmed.slice(6).trim();
+        } else if (trimmed.startsWith('{')) {
+          jsonStr = trimmed;
+        }
+
+        if (!jsonStr) continue;
+
+        try {
+          const data: StreamResponse = JSON.parse(jsonStr);
+          if (data.error) {
+            onError(new Error(data.error));
+            reader.cancel();
+            return;
           }
+          if (data.content !== undefined) {
+            onChunk(data.content, !!data.done);
+          }
+          if (data.done) {
+            onFinish();
+            reader.cancel();
+            return;
+          }
+        } catch {
+          // skip invalid JSON lines
         }
       }
     }

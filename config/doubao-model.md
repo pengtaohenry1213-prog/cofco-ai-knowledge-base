@@ -1,6 +1,13 @@
 ## 豆包-API Key
 - 名称： doubao-api-key-20260329184551
 - API Key：： 279dc1d3-2003-4aa2-baea-5ceda434f97e
+- Embedding向量化接口的正确地址为：https://ark.cn-beijing.volces.com/api/v3/embeddings4
+
+- 接入模型： Doubao-Seed-2.0-Code
+- Model ID: doubao-seed-2-0-code-preview-260215 
+- 接入点 ID：ep-m-20260329204658-gwg5p
+- 购买方式: 按Token付费
+- 所属项目: 豆包-知识库
 
 ### Rest API 调用示例
 ```bash

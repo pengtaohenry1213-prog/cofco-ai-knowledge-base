@@ -1,31 +1,45 @@
 <template>
-  <div id="app">
-    <nav class="navbar">
-      <div class="nav-container">
-        <div class="nav-brand">
-          <el-icon class="brand-icon"><MagicStick /></el-icon>
-          <span class="brand-text">AI 知识库助手</span>
-        </div>
-        <div class="nav-links">
-          <router-link to="/upload" class="nav-link" active-class="active">
-            <el-icon><Document /></el-icon>
-            <span>文档上传</span>
-          </router-link>
-          <router-link to="/chat" class="nav-link" active-class="active">
-            <el-icon><ChatDotRound /></el-icon>
-            <span>智能对话</span>
-          </router-link>
-        </div>
+  <div id="app" class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <el-icon class="sidebar-brand-icon"><MagicStick /></el-icon>
+        <span class="sidebar-brand-text">AI 知识库助手</span>
       </div>
-    </nav>
-    <main class="main-content">
+      <nav class="sidebar-nav">
+        <router-link
+          to="/space"
+          class="nav-item"
+          active-class="active"
+        >
+          <el-icon><User /></el-icon>
+          <span>我的空间</span>
+        </router-link>
+        <router-link
+          to="/agent"
+          class="nav-item"
+          active-class="active"
+        >
+          <el-icon><Cpu /></el-icon>
+          <span>智能体</span>
+        </router-link>
+        <router-link
+          to="/knowledge"
+          class="nav-item"
+          active-class="active"
+        >
+          <el-icon><Collection /></el-icon>
+          <span>知识库</span>
+        </router-link>
+      </nav>
+    </aside>
+    <main class="main-area">
       <router-view />
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { MagicStick, Document, ChatDotRound } from '@element-plus/icons-vue';
+import { MagicStick, User, Cpu, Collection } from '@element-plus/icons-vue';
 </script>
 
 <style>
@@ -36,10 +50,11 @@ import { MagicStick, Document, ChatDotRound } from '@element-plus/icons-vue';
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f5f7fa;
+  background: #f0f2f5;
 }
 
 #app {
@@ -48,68 +63,81 @@ body {
 </style>
 
 <style scoped>
-.navbar {
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+.app-shell {
+  display: flex;
+  min-height: 100vh;
 }
 
-.nav-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-  height: 60px;
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #1a1d24 0%, #14161c 100%);
+  color: #c0c4cc;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar-brand {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
+  padding: 0 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 12px;
 }
 
-.nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.brand-icon {
-  font-size: 28px;
+.sidebar-brand-icon {
+  font-size: 26px;
   color: #409eff;
 }
 
-.brand-text {
-  font-size: 18px;
+.sidebar-brand-text {
+  font-size: 15px;
   font-weight: 600;
-  color: #303133;
+  color: #e4e7ed;
+  line-height: 1.3;
 }
 
-.nav-links {
+.sidebar-nav {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 12px;
 }
 
-.nav-link {
+.nav-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
+  gap: 10px;
+  padding: 12px 14px;
   border-radius: 8px;
   text-decoration: none;
-  color: #606266;
-  transition: all 0.2s;
+  color: #a8abb2;
+  font-size: 14px;
+  transition: background 0.2s, color 0.2s;
 }
 
-.nav-link:hover {
-  background: #f5f7fa;
-  color: #409eff;
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e4e7ed;
 }
 
-.nav-link.active {
-  background: #ecf5ff;
-  color: #409eff;
+.nav-item.active {
+  background: rgba(64, 158, 255, 0.18);
+  color: #79bbff;
 }
 
-.main-content {
-  min-height: calc(100vh - 60px);
+.nav-item .el-icon {
+  font-size: 18px;
+}
+
+.main-area {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  background: #f0f2f5;
+  overflow: auto;
 }
 </style>

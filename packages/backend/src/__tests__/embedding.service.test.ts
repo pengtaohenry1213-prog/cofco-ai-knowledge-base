@@ -117,15 +117,15 @@ describe('createEmbedding', () => {
   // TC-EMB-008: 配置校验在服务启动时执行（已在 index.ts 测试）
   // 此处验证正常情况下 API Key 校验通过
   it('TC-EMB-008: 正常配置下 API Key 校验通过', async () => {
-    // 在 beforeEach 中已设置 DOUBAO_API_KEY，此处验证服务可正常调用
-    const { createEmbedding } = await import('../services/embedding.service');
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 0,
         data: { embeddings: [{ embedding: MOCK_EMBEDDING, index: 0 }] }
       })
     });
+    const { createEmbedding } = await import('../services/embedding.service');
     const result = await createEmbedding('测试');
     expect(result.success).toBe(true);
   });
@@ -140,6 +140,7 @@ describe('createEmbedding', () => {
   // TC-EMB-006: API 调用成功
   it('TC-EMB-006: API调用成功返回1536维向量', async () => {
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 0,
@@ -181,6 +182,7 @@ describe('createEmbedding', () => {
         return Promise.reject(new Error('Network error'));
       }
       return Promise.resolve({
+        status: 200,
         ok: true,
         json: async () => ({
           code: 0,
@@ -213,6 +215,7 @@ describe('createEmbedding', () => {
   // 业务码非 0/200
   it('业务码错误返回msg', async () => {
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 10001,
@@ -242,6 +245,7 @@ describe('VectorStore', () => {
   // TC-EMB-009: addDocument 后 getAllVectors 返回包含所有文档的向量数组
   it('TC-EMB-009: addDocument后getAllVectors返回正确数量的向量', async () => {
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 0,
@@ -273,6 +277,7 @@ describe('VectorStore', () => {
   // 多文档累加
   it('多次addDocument累加到存储', async () => {
     mockFetch.mockResolvedValue({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 0,
@@ -293,6 +298,7 @@ describe('VectorStore', () => {
   // getAllVectors 返回拷贝，不影响内部状态
   it('getAllVectors返回拷贝，外部修改不影响内部', async () => {
     mockFetch.mockResolvedValueOnce({
+      status: 200,
       ok: true,
       json: async () => ({
         code: 0,

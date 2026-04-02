@@ -4,7 +4,7 @@
   "private": true,
   "main": "src/index.ts",
   "scripts": {
-    "dev": "tsx src/index.ts",
+    "dev": "./node_modules/.bin/tsx -r dotenv/config src/index.ts",
     "start": "tsc && node dist/index.js",
     "build": "tsc",
     "test": "vitest",

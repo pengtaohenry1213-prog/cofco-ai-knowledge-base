@@ -1,5 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { chatWithDocument } from '../services/chat.service';
+import {
+  chatWithDocument,
+  buildDocumentQaPrompt,
+  isDocumentCharCountQuestion,
+  answerDocumentCharCount
+} from '../services/chat.service';
 import { searchTopK } from '../services/retrieval.service';
 import { chatCompletionStream } from '../services/llm.service';
 import { setupStreamResponse, sendStreamError } from '../utils/streamResponse';
@@ -10,6 +15,7 @@ const DEFAULT_TOP_K = 5;
 /** 聊天请求参数 */
 interface ChatRequestBody {
   question: string;
+  documentText?: string; // 可选：直接传入文档文本（当无法使用 embedding 时）
 }
 
 /** 聊天响应类型 */
@@ -27,7 +33,7 @@ const router = Router();
  * 完整的 RAG 流程：问题 → embedding → 检索 → Prompt → LLM → 回答
  */
 router.post('/normal', async (req: Request, res: Response) => {
-  const { question } = req.body as ChatRequestBody;
+  const { question, documentText } = req.body as ChatRequestBody;
 
   // 验证问题参数
   if (!question || typeof question !== 'string' || question.trim().length === 0) {
@@ -41,7 +47,7 @@ router.post('/normal', async (req: Request, res: Response) => {
   }
 
   try {
-    const result = await chatWithDocument(question.trim());
+    const result = await chatWithDocument(question.trim(), documentText);
 
     if (result.success) {
       const response: ChatResponse = {
@@ -72,9 +78,12 @@ router.post('/normal', async (req: Request, res: Response) => {
  * POST /api/chat/stream
  * 文档对话接口（流式）
  * 将 LLM 的流式响应逐行推送给前端
+ * 支持两种模式：
+ * 1. documentText 模式：直接使用传入的文档文本
+ * 2. 向量检索模式：从向量库检索相关文档
  */
 router.post('/stream', async (req: Request, res: Response) => {
-  const { question } = req.body as ChatRequestBody;
+  const { question, documentText } = req.body as ChatRequestBody;
 
   // 验证问题参数
   if (!question || typeof question !== 'string' || question.trim().length === 0) {
@@ -93,30 +102,50 @@ router.post('/stream', async (req: Request, res: Response) => {
   });
 
   try {
-    // 1. 检索相关文档
-    const retrievalResult = await searchTopK(trimmedQuestion, DEFAULT_TOP_K);
+    let relevantChunks: string[] = [];
 
-    if (!retrievalResult.success) {
-      sendStreamError(res, retrievalResult.error || '检索失败');
-      return;
+    // 如果传入了文档文本，直接使用
+    if (documentText && documentText.trim().length > 0) {
+      relevantChunks = [documentText.trim()];
+      console.log(`[Chat/Stream] ✓ 使用传入的 documentText，长度=${documentText.length}`);
+    } else {
+      // 否则从向量库检索
+      console.log(`[Chat/Stream] ⚠ 未传 documentText，走向量检索模式`);
+      const retrievalResult = await searchTopK(trimmedQuestion, DEFAULT_TOP_K);
+
+      if (!retrievalResult.success) {
+        console.log(`[Chat/Stream] ✗ 检索失败: ${retrievalResult.error}`);
+        sendStreamError(res, retrievalResult.error || '检索失败');
+        return;
+      }
+
+      relevantChunks = retrievalResult.chunks || [];
+      console.log(`[Chat/Stream] 检索到 ${relevantChunks.length} 个相关片段`);
     }
-
-    const relevantChunks = retrievalResult.data || [];
 
     // 无相关文档时返回提示
     if (relevantChunks.length === 0) {
-      sendStreamError(res, '暂无相关文档，请尝试其他问题或上传更多文档');
+      console.log(`[Chat/Stream] ✗ 无相关文档`);
+      sendStreamError(res, '暂无文档，请先上传文档');
       return;
     }
 
     // 2. 拼接 Prompt
     const contextText = relevantChunks.join('\n\n');
-    const prompt = `基于以下文档内容回答问题。如果文档中没有相关信息，请说明无法根据现有文档回答该问题。
+    const scope: 'full' | 'retrieval' =
+      documentText && documentText.trim().length > 0 ? 'full' : 'retrieval';
+    
+    console.log(`[Chat/Stream] contextText 长度=${contextText.length}，scope=${scope}`);
 
-文档内容：
-${contextText}
+    if (isDocumentCharCountQuestion(trimmedQuestion)) {
+      const text = answerDocumentCharCount(contextText, scope);
+      stream.writeChunk(text, false);
+      stream.writeChunk('', true);
+      stream.close();
+      return;
+    }
 
-问题：${trimmedQuestion}`;
+    const prompt = buildDocumentQaPrompt(trimmedQuestion, contextText);
 
     // 3. 调用流式 LLM 服务
     await chatCompletionStream(

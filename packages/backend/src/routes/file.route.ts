@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { fileService } from '../services/file.service';
+import { vectorStore } from '../services/embedding.service';
 import {
   FileUploadResponse,
   ALLOWED_MIME_TYPES,
@@ -50,6 +51,9 @@ router.post(
         req.file.mimetype,
         req.file.originalname
       );
+
+      // 存储文档到向量库
+      await vectorStore.addDocument(result.text);
 
       const response: FileUploadResponse = {
         success: true,
