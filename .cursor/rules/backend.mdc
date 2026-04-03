@@ -1,4 +1,6 @@
 ---
+description: 后端开发相关的任务，包括 Node.js/Express/TypeScript 服务开发、API 设计、数据库操作、中间件编写、安全配置、Express 服务及 Monorepo packages/backend 目录下的开发工作。
+glob: ["packages/backend/**/*"]
 alwaysApply: false
 ---
 # 后端（Node / Express + TypeScript，角色约束）

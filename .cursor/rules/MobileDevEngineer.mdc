@@ -1,5 +1,22 @@
 ---
 alwaysApply: false
+description: 当讨论移动端开发、uni-app、Taro、多端开发、小程序（H5/微信/支付宝）、移动端性能优化、包体体积控制、响应式尺寸适配、条件编译或移动端特定技术问题时应用此规则。
+globs:
+  - "**/*.vue"
+  - "**/*.ts"
+  - "**/*.js"
+  - "**/pages/**"
+  - "**/components/**"
+  - "**/src/**"
+  - "**/pages.json"
+  - "**/manifest.json"
+  - "**/app.json"
+  - "**/project.config.json"
+  - "**/uni.scss"
+  - "**/app.scss"
+  - "**/app.vue"
+  - "**/mini-project/**"
+  - "**/wxproject/**"
 ---
 # 移动端（uni-app / Taro / 小程序 / H5）
 

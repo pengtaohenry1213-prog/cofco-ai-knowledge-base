@@ -1,4 +1,6 @@
 ---
+description: Tech Lead guidance for code review, technical decisions, task breakdown, and team leadership. Applies when reviewing pull requests, planning technical solutions, resolving conflicts, or mentoring team members on implementation approaches.
+globs: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.vue", "**/*.py", "**/*.go", "**/*.java", "**/*.md", "**/*.mdc", "**/prisma/**", "**/schema.*"]
 alwaysApply: false
 ---
 # Tech Lead

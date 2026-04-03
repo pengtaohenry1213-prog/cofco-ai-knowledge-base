@@ -1,5 +1,20 @@
 ---
 alwaysApply: false
+description: 当讨论数据库设计、SQL 查询、索引优化、数据存储架构、数据库运维、备份恢复、主从复制、缓存策略或数据库故障排查时应用此规则。
+globs:
+  - "**/*.sql"
+  - "**/database/**"
+  - "**/db/**"
+  - "**/models/**"
+  - "**/repositories/**"
+  - "**/migrations/**"
+  - "**/*.migration.*"
+  - "**/config/database*"
+  - "**/knexfile*"
+  - "**/prisma/**"
+  - "**/sequelize/**"
+  - "**/typeorm/**"
+  - "**/drizzle/**"
 ---
 # DBA / 数据存储
 

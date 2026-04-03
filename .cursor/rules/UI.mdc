@@ -1,4 +1,10 @@
 ---
+description: 前端 UI 开发指南，适用于 Vue3 + Element Plus 项目的界面实现、样式规范、微交互和响应式设计。当任务涉及组件开发、页面布局、CSS 样式、UI 交互或前端视觉优化时激活。
+globs:
+  - "**/*.vue"
+  - "**/*.scss"
+  - "**/*.css"
+  - "packages/frontend/**/*"
 alwaysApply: false
 ---
 # UI（前端视觉与落地）

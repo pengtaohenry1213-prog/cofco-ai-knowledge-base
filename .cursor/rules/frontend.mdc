@@ -1,4 +1,6 @@
 ---
+description: 前端开发规范（Vue3 + TypeScript + Vite），涵盖类型安全、代码结构、样式、性能指标等
+globs: packages/frontend/**/*.{ts,vue,tsx,js,jsx,vue}
 alwaysApply: false
 ---
 # 前端（Vue3 + TypeScript）

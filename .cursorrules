@@ -1,0 +1,23 @@
+# Qoder / Claude Skill Spec 适配 Cursor 官方规范
+# 来源：https://qoder-community.pages.dev/zh/skills/
+# 作用：让 Cursor AI 完全遵守官方技能开发标准
+
+## 基础约束
+1. 所有输出必须遵循：定义 → 场景 → 能力 → 示例 → 注意事项
+2. 代码必须生产级、可运行、无占位符
+3. 严格分层：路由层 / 服务层 / 工具层 / 类型层
+4. 适配 Monorepo + pnpm + Vite 架构
+5. 后端仅运行于 Node.js，无浏览器依赖
+
+## 技能开发规范（对齐官方 Spec）
+1. 单一职责：一个技能只做一件事
+2. 异常全覆盖：标准化返回 {success, data, error}
+3. 临时文件自动清理，不残留
+4. 文本解析：原生文本 + OCR 合并输出
+5. PDF 解析必须使用 pdfjs-dist，禁止 pdf-parse
+
+## 项目专属规范
+1. 知识库项目：PDF/Word 上传 → 解析 → 文本合并 → 知识库入库
+2. 前端：Vue3 + Vite + TypeScript
+3. 后端：Express + TypeScript + Monorepo
+4. 包管理：pnpm -F 定向安装依赖

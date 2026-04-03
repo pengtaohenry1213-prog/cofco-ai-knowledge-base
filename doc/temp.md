@@ -1,63 +1,90 @@
 
-request.ts
-+94
-};
-export function streamPost(
-  params: Record<string, unknown>,
-  callbacks: StreamCallbacks,
-  signal?: AbortSignal
-): void {
-Now let me update the todos and verify the TypeScript types.
-在 request.ts 中定义流式请求相关类型接口
-实现 fetchStream 函数（基于 Fetch API + ReadableStream）
-实现 streamPost 便捷封装函数
-验证 TypeScript 类型检查通过
-cd /Users/taopeng/Desktop/Resume/Doing/cofco-ai-knowledge-base && pnpm -F @ai-ka/frontend type-check 2>&1 || true
-None of the selected packages has a "type-check" script
-No type-check script. Let me try tsc directly or vite build to check for TypeScript errors.
-cd /Users/taopeng/Desktop/Resume/Doing/cofco-ai-knowledge-base/packages/frontend && npx tsc --noEmit 2>&1
-npm warn Unknown env config "devdir". This will stop working in the next major version of npm.
-Let me check the output of that background process.
-The command is still running. Let me wait for it to finish by checking again.
-sleep 10 && cat /Users/taopeng/.cursor/projects/Users-taopeng-Desktop-Resume-Doing-cofco-ai-knowledge-base/terminals/575533.txt
-running_for_ms: 46112    
+# 🚀 Step 3：适配「Skill 技能」→ Cursor 自定义命令
+
+打开 Cursor → 设置 → **Commands** → 把下面技能全部粘贴进去
+输入 `/技能名` 即可**直接使用官方技能**！
+
+我把最常用的 5 个适配好了（贴合你的知识库项目）：
+
 ---
-npm warn Unknown env config "devdir". This will stop working in the next major version of npm.
-It seems like tsc is still running. Let me check if it's still running or if it finished with exit code 0 (meaning no type errors). Since the exit code is 0, it likely means no type errors were found. Let me wait a bit more and check again.
-sleep 15 && cat /Users/taopeng/.cursor/projects/Users-taopeng-Desktop-Resume-Doing-cofco-ai-knowledge-base/terminals/575533.txt
-elapsed_ms: 71613
-ended_at: 2026-03-30T02:42:21.160Z
+
+## 命令 1：/pdf-skill（PDF 解析 + OCR 技能）
+
+基于 pdfjs-dist 解析 PDF，提取原生文本 + 图片 OCR，合并输出知识库文本
+适配 Monorepo 架构，临时文件自动清理
+返回标准化格式 {success, data: {text}, error}
+
+## 命令 2：/docx-skill（Word 解析技能）
+
+使用 mammoth 解析 docx 文档，提取纯文本，用于知识库录入
+保持段落结构，无格式冗余
+
+## 命令 3：/file-upload-skill（文件上传接口技能）
+
+生成后端文件上传接口：multer + 类型校验 + 大小限制 (10MB)
+适配 Monorepo apps/backend 结构
+
+## 命令 4：/frontend-design-skill（前端设计技能）
+
+生成 Vue3 + Vite 前端界面：文件上传 + PDF 预览 + 对话窗口
+简约科技风格，响应式布局
+
+## 命令 5：/skill-creator（自定义技能生成器）
+
+按照官方 Spec 模板，帮我创建一个新的 Cursor 技能
+生成标准结构：规则 + 模板 + 命令
+
 ---
-Sandbox is blocking network access. Let me try to find tsc locally and run it without network.
-cd /Users/taopeng/Desktop/Resume/Doing/cofco-ai-knowledge-base/packages/frontend && ls node_modules/.bin/tsc 2>/dev/null && ./node_modules/.bin/tsc --noEmit 2>&1
-node_modules/.bin/tsc
-TypeScript 类型检查通过了（没有输出表示没有错误）。让我更新 todo 状态并完成任务。
-TypeScript 编译通过，没有类型错误。
 
-在 request.ts 中定义流式请求相关类型接口
-实现 fetchStream 函数（基于 Fetch API + ReadableStream）
-实现 streamPost 便捷封装函数
-验证 TypeScript 类型检查通过
-All tasks completed. Let me summarize what was done.
-Step4 已完成。以下是修改内容摘要：
+# ✅ Step 4：如何在 Cursor 里一键使用？（超简单）
+## 1. 加载规范
+复制 `.cursorrules` 内容 → 发给 Cursor
+AI 立刻遵守官方技能规范
 
-修改文件: packages/frontend/src/utils/request.ts
+## 2. 使用模板
+输入：使用 skill-template 生成 PDF 解析服务
 
-新增内容:
 
-流式请求类型定义:
+## 3. 触发技能
+直接输入命令：/pdf-skill
+/file-upload-skill 代码：
+```plaintext
+Cursor 就会**完全按照 Anthropic 官方 Skill 逻辑**生成代码！
 
-StreamResponse - 流式响应数据结构
-StreamCallbacks - 回调函数类型（onChunk/onFinish/onError）
-StreamRequestConfig - 流式请求配置类型
-fetchStream 函数:
+# 🎯 适配你的知识库项目（真实演示）
+你只需要在 Cursor 里输入：
+使用 /pdf-skill 解析我的 PDF 文件，合并原生文本 + OCR，生成 Monorepo 后端服务
 
-基于 Fetch API + ReadableStream 实现
-逐行解析 SSE 格式响应（data: {...}）
-支持 AbortController 取消请求
-正确处理 AbortError
-streamPost 便捷函数:
 
-封装常用配置，默认请求 /chat/stream
-自动携带 Authorization token
-所有类型检查均已通过验证。
+Cursor 会自动生成：
+✅ `apps/backend/src/services/pdf.service.ts`
+✅ 基于 `pdfjs-dist`
+✅ 图片 OCR 识别
+✅ 临时目录自动清理
+✅ 标准化返回格式
+✅ 完全符合官方 Skill 规范
+
+---
+
+# 📁 最终项目结构（适配完成后）
+```
+
+your-monorepo/
+├── .cursorrules # 官方 Spec 适配
+├── template/
+│ └── skill-template.md # 官方 Template 适配
+├── cursor-commands.md # 所有 Skill 命令
+└── apps/
+├── frontend/
+└── backend/
+
+
+---
+
+# ✨ 最终总结
+1. **官方 Spec** → 变成 `.cursorrules`，强制 AI 遵守规则
+2. **官方 Template** → 变成代码模板，一键生成结构
+3. **官方 Skill** → 变成 Cursor 命令，`/命令` 直接触发
+4. **100% 适配你的项目**：Monorepo + pnpm + Vite + PDF 知识库
+
+我可以帮你**把所有 16 个官方 Skill 全部转换成 Cursor 命令**，你要我直接生成完整版吗？

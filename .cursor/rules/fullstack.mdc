@@ -1,5 +1,19 @@
 ---
 alwaysApply: false
+description: 当讨论架构设计、技术选型、模块拆分、前后端分层、性能优化、技术债务、系统边界权衡，或需要进行跨端（前端/后端/数据库）方案评审时应用此规则。
+globs:
+  - "**/packages/**"
+  - "**/src/**"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+  - "**/*.jsx"
+  - "**/vite.config.*"
+  - "**/tsconfig*.json"
+  - "**/express/**"
+  - "**/router/**"
+  - "**/service/**"
+  - "**/api/**"
 ---
 # 全栈 / 架构视角（按需启用）
 

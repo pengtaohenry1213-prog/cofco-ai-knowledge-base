@@ -1,6 +1,15 @@
 ---
+description: 当涉及用户流程设计、交互细节、空状态/错误状态处理、可用性结论、大屏交互、IXD 文档输出或用户体验优化时应用此规则。
+globs:
+  - "**/*ux*.md"
+  - "**/*interaction*.md"
+  - "**/*flow*.md"
+  - "**/ixd/**"
+  - "**/UX/**"
+  - "**/interaction/**"
 alwaysApply: false
 ---
+
 # UX / 交互
 
 ## 定位

@@ -1,6 +1,7 @@
-# doc/
+doc/*
 .my-rules/
-# .cursor/
+.cursor/*
+
 scripts/
 node_modules/
 .env
@@ -8,6 +9,9 @@ backup/
 
 # macOS
 .DS_Store
+
+# 测试数据
+data/
 
 # Build outputs
 dist/
