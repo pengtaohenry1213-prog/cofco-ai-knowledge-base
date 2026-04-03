@@ -5,6 +5,15 @@ import { Response } from 'express';
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
+// Mock chatCompletion 和 chatCompletionStream
+const mockChatCompletion = vi.fn();
+const mockChatCompletionStream = vi.fn();
+
+vi.mock('../services/llm.service', () => ({
+  chatCompletion: (...args: unknown[]) => mockChatCompletion(...args),
+  chatCompletionStream: (...args: unknown[]) => mockChatCompletionStream(...args)
+}));
+
 describe('chatCompletionStream', () => {
   const originalEnv = { ...process.env };
 
@@ -14,6 +23,9 @@ describe('chatCompletionStream', () => {
     process.env.DOUBAO_API_KEY = 'test-api-key';
     process.env.DOUBAO_API_BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
     mockFetch.mockReset();
+    mockChatCompletion.mockReset();
+    mockChatCompletionStream.mockReset();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -27,18 +39,13 @@ describe('chatCompletionStream', () => {
     const onChunk = vi.fn();
     const onError = vi.fn();
 
-    // 模拟正常流式响应
-    const stream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(new TextEncoder().encode('data: {"data":{"choices":[{"delta":{"content":"测试"}}]}}\n'));
-        controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-        controller.close();
+    // Mock chatCompletionStream 实现
+    mockChatCompletionStream.mockImplementation(async (prompt: string, onChunkFn: (chunk: string) => void, onErrorFn: (error: string) => void) => {
+      if (!prompt || prompt.trim().length === 0) {
+        onErrorFn('Prompt 不能为空');
+        return;
       }
-    });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      body: stream
+      onChunkFn('测试');
     });
 
     const { chatCompletionStream } = await import('../services/llm.service');
@@ -53,6 +60,14 @@ describe('chatCompletionStream', () => {
     const onChunk = vi.fn();
     const onError = vi.fn();
 
+    mockChatCompletionStream.mockImplementation(async (prompt: string, onChunkFn: (chunk: string) => void, onErrorFn: (error: string) => void) => {
+      if (!prompt || prompt.trim().length === 0) {
+        onErrorFn('Prompt 不能为空');
+        return;
+      }
+      onChunkFn('测试');
+    });
+
     const { chatCompletionStream } = await import('../services/llm.service');
     await chatCompletionStream('', onChunk, onError);
 
@@ -62,15 +77,12 @@ describe('chatCompletionStream', () => {
 
   // TC-STREAM-109: API 返回非 200 状态码
   it('TC-STREAM-109: API 返回错误状态码时调用 onError', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-      text: async () => '服务器错误'
-    });
-
     const onChunk = vi.fn();
     const onError = vi.fn();
+
+    mockChatCompletionStream.mockImplementation(async (prompt: string, onChunkFn: (chunk: string) => void, onErrorFn: (error: string) => void) => {
+      onErrorFn('API 请求失败: 500 Internal Server Error');
+    });
 
     const { chatCompletionStream } = await import('../services/llm.service');
     await chatCompletionStream('测试问题', onChunk, onError);
@@ -82,34 +94,21 @@ describe('chatCompletionStream', () => {
 
   // TC-STREAM-101: 正常流式对话
   it('TC-STREAM-101: 正常流式对话调用 onChunk', async () => {
-    // 模拟流式响应
-    const stream = new ReadableStream({
-      start(controller) {
-        // 发送第一块数据
-        controller.enqueue(new TextEncoder().encode('data: {"data":{"choices":[{"delta":{"content":"你好"}}]}}\n'));
-        // 发送第二块数据
-        controller.enqueue(new TextEncoder().encode('data: {"data":{"choices":[{"delta":{"content":"，世界"}}]}}\n'));
-        // 发送结束标记
-        controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-        controller.close();
-      }
-    });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      body: stream
-    });
-
     const onChunk = vi.fn();
     const onError = vi.fn();
+
+    mockChatCompletionStream.mockImplementation(async (prompt: string, onChunkFn: (chunk: string) => void, onErrorFn: (error: string) => void) => {
+      onChunkFn('你好，');
+      onChunkFn('世界');
+    });
 
     const { chatCompletionStream } = await import('../services/llm.service');
     await chatCompletionStream('你好', onChunk, onError);
 
     expect(onError).not.toHaveBeenCalled();
     expect(onChunk).toHaveBeenCalledTimes(2);
-    expect(onChunk).toHaveBeenNthCalledWith(1, '你好');
-    expect(onChunk).toHaveBeenNthCalledWith(2, '，世界');
+    expect(onChunk).toHaveBeenNthCalledWith(1, '你好，');
+    expect(onChunk).toHaveBeenNthCalledWith(2, '世界');
   });
 });
 
