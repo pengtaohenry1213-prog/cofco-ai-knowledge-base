@@ -4,6 +4,9 @@ import axios from 'axios';
 export interface FileUploadResult {
   filename: string;
   content: string;
+  html?: string;    // HTML 格式，用于预览
+  pdfPath?: string; // PDF 文件路径（前端渲染用）
+  isPdf?: boolean;  // 是否为 PDF 文件
 }
 
 /** 上传错误类型 */
@@ -21,7 +24,7 @@ export interface UploadConfig {
 }
 
 /** 文件类型白名单 */
-const ALLOWED_TYPES = ['.pdf', '.docx'];
+const ALLOWED_TYPES = ['.pdf', '.docx', '.txt'];
 
 /** 最大文件大小 (10MB) */
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -59,6 +62,10 @@ export interface FileUploadResponse {
   success: boolean;
   data: {
     text: string;
+    html?: string;     // HTML 格式，用于预览
+    filename: string;
+    pdfPath?: string;   // PDF 文件路径（前端渲染用）
+    isPdf?: boolean;    // 是否为 PDF 文件
   } | null;
   error: string | null;
 }
@@ -117,8 +124,11 @@ export async function uploadFile(
     }
 
     return {
-      filename: file.name,
-      content: response.data.data.text
+      filename: response.data.data.filename || file.name,
+      content: response.data.data.text,
+      html: response.data.data.html,
+      pdfPath: response.data.data.pdfPath,
+      isPdf: response.data.data.isPdf
     };
   } catch (error) {
     if (axios.isAxiosError(error)) {

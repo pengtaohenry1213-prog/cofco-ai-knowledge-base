@@ -24,9 +24,13 @@
       </div>
     </div>
 
-    <div class="preview-section">
+      <div class="preview-section">
       <h2 class="section-title">📋 文档预览</h2>
-      <TextPreview :text="documentStore.documentText" />
+      <TextPreview
+        :text="documentStore.documentText"
+        :html="documentStore.documentHtml"
+        :pdf-url="documentStore.pdfPath"
+      />
     </div>
   </div>
 </template>
@@ -49,8 +53,8 @@ const isRedirecting = ref(false);
 /**
  * 上传成功处理
  */
-function handleUploadSuccess(data: { filename: string; content: string }) {
-  documentStore.setDocumentText(data.content, data.filename);
+function handleUploadSuccess(data: { filename: string; content: string; html?: string; pdfPath?: string; isPdf?: boolean }) {
+  documentStore.setDocumentText(data.content, data.filename, data.html, data.pdfPath, data.isPdf);
   ElMessage.success(`${data.filename} 上传成功`);
 }
 
@@ -78,9 +82,9 @@ function goToChat() {
 <style scoped>
 .upload-view {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  padding: 24px;
+  grid-template-columns: 0.7fr 1.3fr;
+  gap: 5px;
+  padding: 10px;
   max-width: 1400px;
   margin: 0 auto;
   min-height: calc(100vh - 48px);
@@ -89,6 +93,7 @@ function goToChat() {
 @media (max-width: 1024px) {
   .upload-view {
     grid-template-columns: 1fr;
+    min-height: 100vh;
   }
 }
 
@@ -97,6 +102,7 @@ function goToChat() {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: fit-content;
 }
 
 .section-title {

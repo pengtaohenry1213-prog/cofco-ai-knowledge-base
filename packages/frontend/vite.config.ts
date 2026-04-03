@@ -16,6 +16,11 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true
+      },
+      // 代理 PDF 文件访问
+      '/uploads': {
+        target: 'http://localhost:3000',
+        changeOrigin: true
       }
     }
   },

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import routes from './routes/index';
 import { logger } from './middlewares/logger.middleware';
 import { errorHandler, BusinessError } from './middlewares/error.middleware';
@@ -7,9 +8,22 @@ import { config } from './config';
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 确保响应使用 UTF-8 编码
+app.set('charset', 'utf-8');
+
+// CORS 配置
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// JSON 和 URL-encoded 解析，确保使用 UTF-8
+app.use(express.json({ charset: 'utf-8' }));
+app.use(express.urlencoded({ extended: true, charset: 'utf-8' }));
+
+// 静态文件服务（PDF 上传文件）
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // 日志中间件 - 首位：记录所有请求
 app.use(logger);
