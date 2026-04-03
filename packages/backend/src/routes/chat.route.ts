@@ -16,6 +16,7 @@ const DEFAULT_TOP_K = 5;
 interface ChatRequestBody {
   question: string;
   documentText?: string; // 可选：直接传入文档文本（当无法使用 embedding 时）
+  knowledgeBaseId?: string; // 可选：指定知识库 ID 进行检索
 }
 
 /** 聊天响应类型 */
@@ -78,12 +79,13 @@ router.post('/normal', async (req: Request, res: Response) => {
  * POST /api/chat/stream
  * 文档对话接口（流式）
  * 将 LLM 的流式响应逐行推送给前端
- * 支持两种模式：
+ * 支持三种模式：
  * 1. documentText 模式：直接使用传入的文档文本
- * 2. 向量检索模式：从向量库检索相关文档
+ * 2. knowledgeBaseId 模式：从指定知识库的向量库检索
+ * 3. 向量检索模式：从所有向量库检索（向后兼容）
  */
 router.post('/stream', async (req: Request, res: Response) => {
-  const { question, documentText } = req.body as ChatRequestBody;
+  const { question, documentText, knowledgeBaseId } = req.body as ChatRequestBody;
 
   // 验证问题参数
   if (!question || typeof question !== 'string' || question.trim().length === 0) {
@@ -109,9 +111,9 @@ router.post('/stream', async (req: Request, res: Response) => {
       relevantChunks = [documentText.trim()];
       console.log(`[Chat/Stream] ✓ 使用传入的 documentText，长度=${documentText.length}`);
     } else {
-      // 否则从向量库检索
-      console.log(`[Chat/Stream] ⚠ 未传 documentText，走向量检索模式`);
-      const retrievalResult = await searchTopK(trimmedQuestion, DEFAULT_TOP_K);
+      // 从知识库向量库检索或从所有向量库检索
+      console.log(`[Chat/Stream] 走向量检索模式${knowledgeBaseId ? `，知识库=${knowledgeBaseId}` : '（全库）'}`);
+      const retrievalResult = await searchTopK(trimmedQuestion, DEFAULT_TOP_K, knowledgeBaseId);
 
       if (!retrievalResult.success) {
         console.log(`[Chat/Stream] ✗ 检索失败: ${retrievalResult.error}`);

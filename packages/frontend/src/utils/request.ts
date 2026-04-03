@@ -51,11 +51,16 @@ service.interceptors.request.use(
 );
 
 service.interceptors.response.use(
-  (response: AxiosResponse<ResponseData>) => {
+  (response: AxiosResponse) => {
     const res = response.data;
-    if (res.code !== 200) {
+    // 兼容两种响应格式: { code, message } 和 { success, error }
+    if (res.code !== undefined && res.code !== 200) {
       ElMessage.error(res.message || '请求失败');
       return Promise.reject(new Error(res.message || '请求失败'));
+    }
+    if (res.success === false) {
+      ElMessage.error(res.error || '请求失败');
+      return Promise.reject(new Error(res.error || '请求失败'));
     }
     return response;
   },

@@ -1,13 +1,35 @@
 <template>
   <div class="chat-view">
     <div class="chat-header">
-      <h2>💬 智能对话</h2>
+      <h2>智能对话</h2>
+      <div class="header-controls">
+        <div class="kb-selector">
+          <el-select
+            v-model="selectedKbId"
+            placeholder="选择知识库（可选）"
+            clearable
+            size="default"
+            style="width: 200px"
+            @change="handleKbChange"
+          >
+            <el-option
+              v-for="kb in availableKbs"
+              :key="kb.id"
+              :label="kb.name"
+              :value="kb.id"
+            >
+              <span>{{ kb.name }}</span>
+              <span class="kb-option-hint">{{ kb.documentCount || 0 }} 个文档</span>
+            </el-option>
+          </el-select>
+        </div>
+      </div>
       <p class="description">
-        <span v-if="documentStore.hasDocument">
-          基于知识库的智能问答助手
+        <span v-if="hasActiveDocument">
+          基于「{{ selectedKbName || '已上传文档' }}」的智能问答助手
         </span>
         <span v-else class="no-document">
-          请先上传文档后再进行对话
+          请先选择知识库或上传文档后再进行对话
         </span>
       </p>
     </div>
@@ -39,11 +61,11 @@
         />
 
         <!-- 空状态 -->
-        <div v-if="!documentStore.hasDocument" class="no-document-overlay">
+        <div v-if="!hasActiveDocument" class="no-document-overlay">
           <el-icon class="empty-icon"><Document /></el-icon>
-          <p>请先上传文档</p>
-          <el-button type="primary" @click="goToUpload">
-            去上传文档
+          <p>请先选择知识库或上传文档</p>
+          <el-button type="primary" @click="goToKnowledge">
+            去知识库
           </el-button>
         </div>
       </div>
@@ -55,15 +77,15 @@
         v-model="userInput"
         type="textarea"
         :rows="3"
-        :placeholder="documentStore.hasDocument ? '请输入您的问题...' : '请先上传文档后再提问'"
-        :disabled="loading || !documentStore.hasDocument"
+        :placeholder="hasActiveDocument ? '请输入您的问题...' : '请先选择知识库或上传文档后再提问'"
+        :disabled="loading || !hasActiveDocument"
         @keydown.enter.ctrl="handleSend"
       />
       <el-button
         type="primary"
         size="large"
         :loading="loading"
-        :disabled="!userInput.trim() || !documentStore.hasDocument"
+        :disabled="!userInput.trim() || !hasActiveDocument"
         @click="handleSend"
       >
         发送
@@ -73,13 +95,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, computed, nextTick, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { Document } from '@element-plus/icons-vue';
-import { request, streamPost } from '@/utils/request';
+import { streamPost } from '@/utils/request';
 import ChatList from '@/components/ChatList.vue';
 import { useDocumentStore } from '@/store/modules/document';
+import { useKnowledgeBaseStore } from '@/store/modules/knowledgeBase';
 import type { ChatItem } from '@/types/chat';
 
 interface Message extends ChatItem {
@@ -94,31 +117,61 @@ interface ChatHistory {
 
 const router = useRouter();
 const documentStore = useDocumentStore();
+const kbStore = useKnowledgeBaseStore();
 
 const chatListRef = ref<InstanceType<typeof ChatList> | null>(null);
-const userInput = ref('当前文本长度是什么？');
+const userInput = ref('');
 const loading = ref(false);
 const messages = ref<Message[]>([]);
 const chatHistory = ref<ChatHistory[]>([]);
 const currentChatIndex = ref(-1);
+const selectedKbId = ref<string>('');
+
+// 可用的知识库列表（仅显示本地文档库）
+const availableKbs = computed(() => {
+  return kbStore.list.filter((kb) => kb.kind === 'local');
+});
+
+// 当前选中的知识库名称
+const selectedKbName = computed(() => {
+  const kb = kbStore.getById(selectedKbId.value);
+  return kb?.name || '';
+});
+
+// 是否有可用的文档
+const hasActiveDocument = computed(() => {
+  // 如果选择了知识库，且该知识库有文档
+  if (selectedKbId.value) {
+    const kbDocs = documentStore.documents.filter((doc) =>
+      doc.knowledgeBaseIds.includes(selectedKbId.value)
+    );
+    return kbDocs.length > 0;
+  }
+  // 否则使用旧的 documentStore
+  return documentStore.hasDocument;
+});
+
+onMounted(async () => {
+  // 加载知识库列表（不需要等待）
+  // 加载文档列表
+  await documentStore.fetchDocuments();
+});
+
+// 处理知识库选择变化
+async function handleKbChange(kbId: string) {
+  if (kbId) {
+    // 加载该知识库的文档
+    await documentStore.fetchDocuments(kbId);
+  }
+}
 
 const scrollToBottom = async () => {
   await nextTick();
   chatListRef.value?.scrollToBottom();
 };
 
-const formatMessage = (content: string): string => {
-  return content
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-};
-
-const goToUpload = () => {
-  router.push('/space');
+const goToKnowledge = () => {
+  router.push('/knowledge');
 };
 
 const handleSend = async () => {
@@ -147,13 +200,23 @@ const handleSend = async () => {
 
   const abortController = new AbortController();
 
+  // 构建请求参数
+  const requestParams: Record<string, unknown> = {
+    question: userMessage.content
+  };
+
+  // 如果选择了知识库，传递知识库 ID
+  if (selectedKbId.value) {
+    requestParams.knowledgeBaseId = selectedKbId.value;
+  } else if (documentStore.documentText) {
+    // 否则使用直接传入的文档文本
+    requestParams.documentText = documentStore.documentText;
+  }
+
   streamPost(
+    requestParams,
     {
-      question: userMessage.content,
-      documentText: documentStore.documentText
-    },
-    {
-      onChunk: (text: string, done: boolean) => {
+      onChunk: (text: string, _done: boolean) => {
         assistantMessage.content += text;
         scrollToBottom();
       },
@@ -194,9 +257,27 @@ const loadChat = (index: number) => {
 }
 
 .chat-header h2 {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   font-size: 24px;
   color: #303133;
+}
+
+.header-controls {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.kb-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kb-option-hint {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 8px;
 }
 
 .description {

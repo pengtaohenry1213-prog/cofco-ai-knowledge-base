@@ -22,6 +22,10 @@ export interface KnowledgeBaseItem {
   customConnectionId?: string;
   apiName?: string;
   fieldMappings?: FieldMappingRow[];
+  /** 本地文档库：关联的文档数量 */
+  documentCount?: number;
+  /** 本地文档库：总块数 */
+  totalChunks?: number;
 }
 
 export interface KnowledgeBaseFormPayload {

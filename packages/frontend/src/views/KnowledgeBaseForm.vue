@@ -107,6 +107,34 @@
         </el-form-item>
       </el-card>
 
+      <!-- 文档管理（仅本地文档库显示） -->
+      <el-card v-show="form.kind === 'local' && !!currentKbId" shadow="never" class="section-card">
+        <template #header>
+          <div class="section-header">
+            <span class="section-title">文档管理</span>
+            <span class="section-hint">上传文档到当前知识库</span>
+          </div>
+        </template>
+
+        <div class="document-section">
+          <div class="upload-area">
+            <FileUpload @success="handleUploadSuccess" @error="handleUploadError" />
+          </div>
+
+          <div class="document-list-area">
+            <div class="list-header">
+              <span class="list-title">已上传文档</span>
+              <span class="list-count">{{ kbDocuments.length }} 个</span>
+            </div>
+            <DocumentList
+              :documents="kbDocuments"
+              :loading="docLoading"
+              @delete="handleDeleteDocument"
+            />
+          </div>
+        </div>
+      </el-card>
+
       <div class="form-footer">
         <el-button type="primary" size="large" :loading="saving" @click="submit">保存</el-button>
       </div>
@@ -121,19 +149,31 @@ import type { FormInstance, FormRules } from 'element-plus';
 import { ElMessage } from 'element-plus';
 import { Plus, QuestionFilled } from '@element-plus/icons-vue';
 import { useKnowledgeBaseStore } from '@/store/modules/knowledgeBase';
+import { useDocumentStore } from '@/store/modules/document';
+import FileUpload from '@/components/FileUpload.vue';
+import DocumentList from '@/components/DocumentList.vue';
 import type { FieldMappingRow, KnowledgeBaseKind } from '@/types/knowledgeBase';
+import type { DocumentItem } from '@/types/document';
 
 const route = useRoute();
 const router = useRouter();
 const kbStore = useKnowledgeBaseStore();
+const docStore = useDocumentStore();
 
 const formRef = ref<FormInstance>();
 const saving = ref(false);
+const docLoading = ref(false);
 
 const isEdit = computed(() => route.name === 'KnowledgeBaseEdit');
 const editId = computed(() =>
   isEdit.value ? (route.params.id as string) : undefined
 );
+const currentKbId = computed(() => editId.value || '');
+
+// 当前知识库的文档列表
+const kbDocuments = computed(() => {
+  return docStore.documents.filter((doc) => doc.knowledgeBaseIds.includes(currentKbId.value));
+});
 
 const connectionOptions = [
   { label: '默认外部连接 A', value: 'conn-a' },
@@ -219,8 +259,19 @@ function resetFormForCreate() {
 function syncFormWithRoute() {
   if (isEdit.value) {
     loadEdit();
+    loadDocuments();
   } else {
     resetFormForCreate();
+  }
+}
+
+async function loadDocuments() {
+  if (!currentKbId.value) return;
+  docLoading.value = true;
+  try {
+    await docStore.fetchDocuments(currentKbId.value);
+  } finally {
+    docLoading.value = false;
   }
 }
 
@@ -232,6 +283,24 @@ watch(
     syncFormWithRoute();
   }
 );
+
+async function handleUploadSuccess(data: { filename: string; content: string }) {
+  // 如果有文件上传成功，重新加载文档列表以显示新文档
+  await loadDocuments();
+}
+
+function handleUploadError(error: { type: string; message: string }) {
+  ElMessage.error(error.message);
+}
+
+async function handleDeleteDocument(doc: DocumentItem) {
+  const success = await docStore.deleteDocument(doc.id);
+  if (success) {
+    ElMessage.success('删除成功');
+  } else {
+    ElMessage.error('删除失败');
+  }
+}
 
 function addMappingRow() {
   form.fieldMappings.push(emptyMappingRow());
@@ -317,6 +386,51 @@ async function submit() {
 
 .add-field-btn {
   margin-top: 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-hint {
+  font-size: 12px;
+  color: #909399;
+  font-weight: normal;
+}
+
+.document-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.upload-area {
+  max-width: 500px;
+}
+
+.document-list-area {
+  border-top: 1px solid #ebeef5;
+  padding-top: 16px;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.list-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #606266;
+}
+
+.list-count {
+  font-size: 12px;
+  color: #909399;
 }
 
 .form-footer {

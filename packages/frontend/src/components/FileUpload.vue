@@ -12,7 +12,7 @@
         ref="fileInputRef"
         type="file"
         class="file-input"
-        accept=".pdf,.docx"
+        accept=".pdf,.docx,.txt"
         @change="handleFileChange"
       />
 
@@ -21,7 +21,7 @@
         <p class="upload-text">
           <em>点击上传</em> 或拖拽文件到这里
         </p>
-        <p class="upload-hint">支持 PDF、DOCX 格式，文件大小不超过 10MB</p>
+        <p class="upload-hint">支持 PDF、DOCX、TXT 格式，文件大小不超过 10MB</p>
       </div>
 
       <div v-else-if="state.status === 'uploading'" class="upload-progress">
@@ -55,7 +55,7 @@ import type { UploadErrorType } from '@/api/file';
 import { uploadFile } from '@/api/file';
 
 /** 允许的文件类型 */
-const ALLOWED_TYPES = ['.pdf', '.docx'];
+const ALLOWED_TYPES = ['.pdf', '.docx', '.txt'];
 /** 最大文件大小 (10MB) */
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
@@ -84,7 +84,7 @@ const state = reactive<UploadState>({
 
 /** emits */
 const emit = defineEmits<{
-  (e: 'success', data: { filename: string; content: string }): void;
+  (e: 'success', data: { filename: string; content: string; html?: string }): void;
   (e: 'error', error: { type: UploadErrorType; message: string }): void;
 }>();
 

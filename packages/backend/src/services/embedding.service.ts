@@ -4,6 +4,7 @@ import {
   EmbeddingResult,
   ChunkOptions
 } from '../types/embedding.types';
+import { KnowledgeBaseVectorStore, VectorItem as KbVectorItem } from '../types/document.types';
 import { config } from '../config';
 
 /** SiliconFlow Embedding API 端点 */
@@ -241,24 +242,27 @@ export async function createEmbedding(text: string): Promise<EmbeddingResult> {
 
 /**
  * 向量内存存储类
- * 提供文档添加和向量查询能力，预留数据库扩展接口
+ * 提供文档添加和向量查询能力，按知识库隔离存储
  */
 export class VectorStore {
-  private vectors: VectorItem[] = [];
+  /** 按知识库 ID 隔离的向量存储 */
+  private kbStores: Map<string, VectorItem[]> = new Map();
 
   /**
-   * 添加文档到向量存储
+   * 添加文档到指定知识库的向量存储
    * - 自动分块
    * - 调用 Embedding API 获取向量
    *
    * @param text - 文档文本
+   * @param knowledgeBaseId - 知识库 ID
    * @param options - 分块选项
-   * @returns EmbeddingResult
+   * @returns 包含 chunkIds 的结果
    */
   async addDocument(
     text: string,
+    knowledgeBaseId: string,
     options: ChunkOptions = {}
-  ): Promise<EmbeddingResult> {
+  ): Promise<{ success: boolean; chunkIds?: string[]; error?: string }> {
     const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
     const overlap = options.overlap ?? DEFAULT_OVERLAP;
 
@@ -267,29 +271,177 @@ export class VectorStore {
     }
 
     const chunks = splitIntoChunks(text, chunkSize, overlap);
+    const chunkIds: string[] = [];
+    const timestamp = Date.now();
 
-    for (const chunk of chunks) {
-      const result = await createEmbedding(chunk.content);
+    for (let i = 0; i < chunks.length; i++) {
+      const result = await createEmbedding(chunks[i].content);
 
       if (!result.success) {
-        return result;
+        return { success: false, error: result.error };
       }
 
-      this.vectors.push({
-        id: chunk.id,
-        content: chunk.content,
+      const chunkId = `kb-${knowledgeBaseId}-chunk-${timestamp}-${i}`;
+      chunkIds.push(chunkId);
+
+      const vectorItem: VectorItem = {
+        id: chunkId,
+        content: chunks[i].content,
         embedding: result.data!
-      });
+      };
+
+      // 按知识库 ID 存储
+      const kbVectors = this.kbStores.get(knowledgeBaseId) || [];
+      kbVectors.push(vectorItem);
+      this.kbStores.set(knowledgeBaseId, kbVectors);
     }
 
-    return { success: true };
+    console.log(`[VectorStore] 添加到知识库 ${knowledgeBaseId}: ${chunkIds.length} 个分块`);
+    return { success: true, chunkIds };
   }
 
   /**
-   * 获取所有已存储的向量
+   * 向已有知识库添加新的分块
+   * @param text - 文档文本
+   * @param knowledgeBaseId - 知识库 ID
+   * @param options - 分块选项
+   * @returns 包含 chunkIds 的结果
    */
-  getAllVectors(): VectorItem[] {
-    return [...this.vectors];
+  async addChunks(
+    text: string,
+    knowledgeBaseId: string,
+    options: ChunkOptions = {}
+  ): Promise<{ success: boolean; chunkIds?: string[]; error?: string }> {
+    return this.addDocument(text, knowledgeBaseId, options);
+  }
+
+  /**
+   * 查询指定知识库的相关向量
+   * @param question - 查询问题
+   * @param knowledgeBaseId - 知识库 ID
+   * @param topK - 返回数量
+   * @returns 相似度最高的向量
+   */
+  async queryByKnowledgeBase(
+    question: string,
+    knowledgeBaseId: string,
+    topK: number = 5
+  ): Promise<VectorItem[]> {
+    const kbVectors = this.kbStores.get(knowledgeBaseId) || [];
+    if (kbVectors.length === 0) {
+      console.log(`[VectorStore] 知识库 ${knowledgeBaseId} 没有向量数据`);
+      return [];
+    }
+
+    // 生成问题的 embedding
+    const questionEmbedding = await createEmbedding(question);
+    if (!questionEmbedding.success || !questionEmbedding.data) {
+      console.log(`[VectorStore] 问题 embedding 失败: ${questionEmbedding.error}`);
+      return [];
+    }
+
+    // 计算相似度并排序
+    const similarities = kbVectors.map((v) => ({
+      vector: v,
+      similarity: this.cosineSimilarity(questionEmbedding.data!, v.embedding)
+    }));
+
+    similarities.sort((a, b) => b.similarity - a.similarity);
+    const results = similarities.slice(0, topK).map((s) => s.vector);
+
+    console.log(`[VectorStore] 查询知识库 ${knowledgeBaseId}: 返回 ${results.length} 个结果`);
+    return results;
+  }
+
+  /**
+   * 查询所有知识库的相关向量（兼容旧接口）
+   * @param question - 查询问题
+   * @param topK - 返回数量
+   * @returns 相似度最高的向量
+   */
+  async query(question: string, topK: number = 5): Promise<VectorItem[]> {
+    // 合并所有知识库的向量
+    const allVectors: VectorItem[] = [];
+    for (const vectors of this.kbStores.values()) {
+      allVectors.push(...vectors);
+    }
+
+    if (allVectors.length === 0) {
+      return [];
+    }
+
+    const questionEmbedding = await createEmbedding(question);
+    if (!questionEmbedding.success || !questionEmbedding.data) {
+      return [];
+    }
+
+    const similarities = allVectors.map((v) => ({
+      vector: v,
+      similarity: this.cosineSimilarity(questionEmbedding.data!, v.embedding)
+    }));
+
+    similarities.sort((a, b) => b.similarity - a.similarity);
+    return similarities.slice(0, topK).map((s) => s.vector);
+  }
+
+  /**
+   * 计算余弦相似度
+   */
+  private cosineSimilarity(a: number[], b: number[]): number {
+    if (a.length !== b.length) return 0;
+
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+
+    for (let i = 0; i < a.length; i++) {
+      dotProduct += a[i] * b[i];
+      normA += a[i] * a[i];
+      normB += b[i] * b[i];
+    }
+
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  /**
+   * 删除指定分块
+   * @param chunkIds - 分块 ID 数组
+   */
+  deleteChunks(chunkIds: string[]): void {
+    for (const [kbId, vectors] of this.kbStores.entries()) {
+      const filtered = vectors.filter((v) => !chunkIds.includes(v.id));
+      this.kbStores.set(kbId, filtered);
+    }
+    console.log(`[VectorStore] 删除分块: ${chunkIds.length} 个`);
+  }
+
+  /**
+   * 删除指定知识库的所有向量
+   * @param knowledgeBaseId - 知识库 ID
+   */
+  deleteByKnowledgeBase(knowledgeBaseId: string): void {
+    this.kbStores.delete(knowledgeBaseId);
+    console.log(`[VectorStore] 删除知识库 ${knowledgeBaseId} 的所有向量`);
+  }
+
+  /**
+   * 获取指定知识库的向量数量
+   * @param knowledgeBaseId - 知识库 ID
+   */
+  getVectorCount(knowledgeBaseId: string): number {
+    return this.kbStores.get(knowledgeBaseId)?.length || 0;
+  }
+
+  /**
+   * 获取所有知识库的向量统计
+   */
+  getStats(): { knowledgeBaseId: string; count: number }[] {
+    const stats: { knowledgeBaseId: string; count: number }[] = [];
+    for (const [kbId, vectors] of this.kbStores.entries()) {
+      stats.push({ knowledgeBaseId: kbId, count: vectors.length });
+    }
+    return stats;
   }
 
   /**

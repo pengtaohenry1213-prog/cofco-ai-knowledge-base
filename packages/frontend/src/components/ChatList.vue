@@ -9,7 +9,7 @@
     <!-- 消息列表 -->
     <div v-else class="chat-list" ref="listContainer">
       <div
-        v-for="item in chatList"
+        v-for="(item, index) in chatList"
         :key="item.id"
         class="message-item"
         :class="item.role"
@@ -19,18 +19,17 @@
           <el-icon v-else><Service /></el-icon>
         </div>
         <div class="message-bubble">
-          <div class="message-content" v-html="formatContent(item.content)"></div>
-        </div>
-      </div>
-
-      <!-- AI 正在输入的打字机效果 -->
-      <div v-if="isLoading && streamingText !== undefined" class="message-item assistant">
-        <div class="message-avatar">
-          <el-icon><Robot /></el-icon>
-        </div>
-        <div class="message-bubble">
-          <div class="message-content" v-html="formatContent(streamingText)"></div>
-          <span class="typing-cursor">|</span>
+          <div class="message-content">
+            <span
+              v-if="showThinkingPlaceholder(item, index)"
+              class="thinking-hint"
+            >正在生成回答…</span>
+            <span v-else v-html="formatContent(item.content)"></span>
+            <span
+              v-if="showStreamingCursor(item, index)"
+              class="typing-cursor"
+            >|</span>
+          </div>
         </div>
       </div>
     </div>
@@ -48,9 +47,26 @@ const props = withDefaults(defineProps<ChatListProps>(), {
 });
 
 const listContainer = ref<HTMLElement | null>(null);
-const streamingText = ref<string | undefined>(undefined);
 
-let typingEffectInstance: { stop: () => void } | null = null;
+function isLastAssistantRow(item: ChatItem, index: number): boolean {
+  return item.role === 'assistant' && index === props.chatList.length - 1;
+}
+
+function showThinkingPlaceholder(item: ChatItem, index: number): boolean {
+  return (
+    !!props.isLoading &&
+    isLastAssistantRow(item, index) &&
+    !item.content
+  );
+}
+
+function showStreamingCursor(item: ChatItem, index: number): boolean {
+  return (
+    !!props.isLoading &&
+    isLastAssistantRow(item, index) &&
+    !!item.content
+  );
+}
 
 /**
  * 滚动到底部
@@ -76,24 +92,16 @@ const formatContent = (content: string): string => {
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 };
 
-/**
- * 监听流式内容变化
- */
-watch(() => props.chatList, async (newList) => {
-  const lastItem = newList[newList.length - 1];
-  if (lastItem && lastItem.role === 'assistant') {
-    streamingText.value = lastItem.content;
+watch(
+  () => props.chatList,
+  async () => {
+    await nextTick();
     await scrollToBottom();
-  }
-}, { deep: true });
+  },
+  { deep: true }
+);
 
-/**
- * 监听 loading 状态
- */
-watch(() => props.isLoading, async (loading) => {
-  if (!loading) {
-    streamingText.value = undefined;
-  }
+watch(() => props.isLoading, async () => {
   await nextTick();
   await scrollToBottom();
 });
@@ -233,6 +241,22 @@ defineExpose({
   color: #303133;
   border-bottom-left-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.thinking-hint {
+  color: #909399;
+  font-size: 14px;
+  animation: thinking-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes thinking-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 /* 代码块样式 */

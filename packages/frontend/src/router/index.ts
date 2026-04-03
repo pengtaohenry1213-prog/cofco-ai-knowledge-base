@@ -46,6 +46,14 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/documents',
+    name: 'DocumentManager',
+    component: () => import('@/views/DocumentManager.vue'),
+    meta: {
+      title: '文档管理'
+    }
+  },
+  {
     path: '/upload',
     redirect: '/space'
   },

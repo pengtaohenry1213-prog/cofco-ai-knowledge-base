@@ -1,5 +1,4 @@
 import { vectorStore } from './embedding.service';
-import { cosineSimilarity } from '../utils/similarity';
 import { createEmbedding } from './embedding.service';
 
 /** 检索结果 */
@@ -14,11 +13,13 @@ export interface RetrievalResult {
  *
  * @param question - 查询问题
  * @param k - 返回的最相似结果数量（默认1）
+ * @param knowledgeBaseId - 可选，指定知识库 ID，不指定则搜索所有
  * @returns RetrievalResult，包含最相似的文本块数组
  */
 export async function searchTopK(
   question: string,
-  k: number = 1
+  k: number = 1,
+  knowledgeBaseId?: string
 ): Promise<RetrievalResult> {
   // 验证 k 值
   if (k < 1) {
@@ -28,42 +29,22 @@ export async function searchTopK(
     };
   }
 
-  // 获取所有已存储的文档向量
-  const allVectors = vectorStore.getAllVectors();
+  // 获取向量（按知识库或全部）
+  const vectors = knowledgeBaseId
+    ? await vectorStore.queryByKnowledgeBase(question, knowledgeBaseId, k)
+    : await vectorStore.query(question, k);
 
   // 无文档时返回错误
-  if (allVectors.length === 0) {
+  if (vectors.length === 0) {
     return {
       success: false,
-      error: '暂无文档'
+      error: knowledgeBaseId ? '该知识库暂无文档' : '暂无文档'
     };
   }
 
-  // 创建查询问题的 embedding
-  const embeddingResult = await createEmbedding(question);
-
-  if (!embeddingResult.success || !embeddingResult.data) {
-    return {
-      success: false,
-      error: embeddingResult.error || '获取问题向量失败'
-    };
-  }
-
-  const queryVector = embeddingResult.data;
-
-  // 计算每个文档与查询的余弦相似度
-  const scoredResults = allVectors.map((item) => ({
-    content: item.content,
-    score: cosineSimilarity(queryVector, item.embedding)
-  }));
-
-  // 按相似度降序排序，取前 k 个
-  scoredResults.sort((a, b) => b.score - a.score);
-  const topKResults = scoredResults.slice(0, k);
-
-  // 返回文本块数组
+  // 直接返回检索结果
   return {
     success: true,
-    chunks: topKResults.map((r) => r.content)
+    chunks: vectors.map((v) => v.content)
   };
 }
