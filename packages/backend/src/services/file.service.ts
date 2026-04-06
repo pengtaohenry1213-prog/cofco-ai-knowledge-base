@@ -1,11 +1,25 @@
-import { PDFParse } from 'pdf-parse';
+import * as pdfjsLib from 'pdfjs-dist';
 import mammoth from 'mammoth';
+import { createWorker } from 'tesseract.js';
+import fs from 'fs-extra';
 import path from 'path';
-import fs from 'fs';
+import { execSync } from 'child_process';
 import { FileParseResult, FILE_ERROR_MESSAGES } from '../types/file.types';
 
+/** 设置 pdfjs-dist Worker（Node.js 环境） */
+pdfjsLib.GlobalWorkerOptions.workerSrc = path.join(
+  process.cwd(),
+  'node_modules/pdfjs-dist/build/pdf.worker.js'
+);
+
 /** PDF 文件存储目录 */
-const PDF_UPLOAD_DIR = path.join(__dirname, '../../uploads/pdfs');
+const PDF_UPLOAD_DIR = path.join(process.cwd(), 'packages/backend/uploads/pdfs');
+
+/** 临时 PDF 图片目录 */
+const TEMP_PDF_IMAGES_DIR = path.join(process.cwd(), 'temp-pdf-images');
+
+/** ImageMagick convert 命令路径 */
+const IMAGEMAGICK_CONVERT = '/opt/homebrew/bin/convert';
 
 /** 确保上传目录存在 */
 function ensureUploadDir() {
@@ -35,16 +49,14 @@ export class FileService {
     let pdfPath: string | undefined;
 
     if (isPdf) {
-      const result = await this.parsePdfToHtml(buffer, filename);
+      const result = await this.parsePdf(buffer, filename);
       text = result.text;
-      html = result.html;
       pdfPath = result.pdfPath;
     } else if (isDocx) {
       const result = await this.parseDocxToHtml(buffer);
       text = result.text;
       html = result.html;
     } else {
-      // TXT 文件 - 也生成简单 HTML
       text = buffer.toString('utf-8');
       html = this.txtToHtml(text);
     }
@@ -64,39 +76,125 @@ export class FileService {
   }
 
   /**
-   * 解析 PDF：纯文本用于向量检索；PDF 文件存储用于前端渲染
+   * 解析 PDF：原生文本 + 图片 OCR 文字，合并输出
+   * 使用 pdfjs-dist 提取原生文本，ImageMagick + tesseract.js 识别图片文字
    */
-  private async parsePdfToHtml(buffer: Buffer, filename: string): Promise<{ text: string; html?: string; pdfPath: string }> {
-    // 确保上传目录存在
+  private async parsePdf(buffer: Buffer, filename: string): Promise<{ text: string; pdfPath: string }> {
     ensureUploadDir();
 
-    // 生成唯一文件名（时间戳 + 原始文件名）
     const timestamp = Date.now();
     const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
     const pdfFilename = `${timestamp}_${safeFilename}`;
     const pdfPath = path.join(PDF_UPLOAD_DIR, pdfFilename);
 
-    // 保存 PDF 文件到磁盘
     fs.writeFileSync(pdfPath, buffer);
 
-    // 使用 pdf-parse 提取文本
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const textResult = await parser.getText();
+    const relativePdfPath = `/uploads/pdfs/${pdfFilename}`;
+    let totalText = '';
 
-      // PDF 前端渲染时使用相对路径
-      const relativePdfPath = `/uploads/pdfs/${pdfFilename}`;
+    try {
+      const uint8Array = new Uint8Array(buffer);
+      const pdfDoc = await pdfjsLib.getDocument(uint8Array).promise;
+
+      let nativeText = '';
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const content = await page.getTextContent();
+        const pageStr = content.items.map((item: any) => item.str).join(' ');
+        nativeText += pageStr + '\n';
+      }
+
+      if (nativeText.trim()) {
+        totalText += '【原生文本】\n' + nativeText.trim() + '\n\n';
+      }
+
+      const ocrText = await this.extractAndOcrPdfImages(buffer);
+
+      if (ocrText.trim()) {
+        totalText += '【图片OCR文本】\n' + ocrText.trim();
+      }
+
+      if (!totalText.trim()) {
+        throw new Error(FILE_ERROR_MESSAGES.PARSE_FAILED);
+      }
 
       return {
-        text: textResult.text,
-        html: undefined, // PDF 不生成 HTML，由前端渲染
+        text: totalText.trim(),
         pdfPath: relativePdfPath
       };
     } catch (error) {
       console.error('[FileService] PDF 解析失败:', error);
       throw new Error(FILE_ERROR_MESSAGES.PARSE_FAILED);
-    } finally {
-      await parser.destroy();
+    }
+  }
+
+  /**
+   * 使用 ImageMagick 提取 PDF 图片并使用 OCR 识别文字
+   */
+  private async extractAndOcrPdfImages(buffer: Buffer): Promise<string> {
+    const tempDir = TEMP_PDF_IMAGES_DIR;
+
+    try {
+      await fs.ensureDir(tempDir);
+
+      // 保存临时 PDF 文件
+      const tempPdfPath = path.join(tempDir, 'temp.pdf');
+      fs.writeFileSync(tempPdfPath, buffer);
+
+      // 使用 ImageMagick 逐页转换为图片
+      const imagePaths: string[] = [];
+      let pageNum = 0;
+
+      while (true) {
+        const outPath = path.join(tempDir, `page-${pageNum}.png`);
+        try {
+          execSync(
+            `${IMAGEMAGICK_CONVERT} -density 150 "${tempPdfPath}[${pageNum}]" -quality 90 "${outPath}"`,
+            { timeout: 30000, stdio: 'pipe' }
+          );
+
+          if (!fs.existsSync(outPath)) {
+            break;
+          }
+          imagePaths.push(outPath);
+          pageNum++;
+        } catch {
+          break;
+        }
+      }
+
+      if (imagePaths.length === 0) {
+        await fs.remove(tempDir);
+        return '';
+      }
+
+      // 使用 tesseract.js 进行 OCR 识别
+      const worker = await createWorker('chi_sim+eng');
+      let ocrText = '';
+
+      for (const imgPath of imagePaths) {
+        try {
+          const { data: { text } } = await worker.recognize(imgPath);
+          ocrText += text + '\n';
+        } finally {
+          if (fs.existsSync(imgPath)) {
+            await fs.unlink(imgPath);
+          }
+        }
+      }
+
+      await worker.terminate();
+      await fs.remove(tempDir);
+
+      return ocrText.trim();
+    } catch (error) {
+      console.warn('[FileService] PDF 图片 OCR 失败:', error);
+      try {
+        if (fs.existsSync(tempDir)) {
+          await fs.remove(tempDir);
+        }
+      } catch { /* ignore cleanup errors */ }
+      return '';
     }
   }
 
