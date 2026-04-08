@@ -2,7 +2,7 @@
  * @Author: pengtaohenry1213-prog pengtaohenry1213@gmail.com
  * @Date: 2026-03-17 18:37:02
  * @LastEditors: pengtaohenry1213-prog pengtaohenry1213@gmail.com
- * @LastEditTime: 2026-03-30 10:00:00
+ * @LastEditTime: 2026-04-08 14:40:00
  * @FilePath: /cofco-ai-knowledge-base/README.md
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
@@ -20,12 +20,12 @@ cofco AI 智能知识库助手，一个AI知识库问答系统。
 
 ## 一、根目录文件（项目全局配置）
 
-| 文件路径                | 核心作用                                                                 |
-|-------------------------|--------------------------------------------------------------------------|
-| `ai-knowledge-assistant/package.json` | 根项目配置：<br>1. 定义 `workspaces` 管理子包；<br>2. 提供启动脚本（并行/单独启动前后端）；<br>3. 指定 `pnpm` 包管理器版本。 |
-| `ai-knowledge-assistant/tsconfig.json` | 全局 TypeScript 配置：<br>1. 启用严格模式（`strict: true`）；<br>2. 统一编译目标（ES2020）、模块解析规则；<br>3. 排除 `node_modules`/`dist` 目录。 |
-| `ai-knowledge-assistant/.env` | 全局环境变量：<br>1. 配置后端服务端口（`PORT=3000`）；<br>2. 配置豆包API密钥/基础地址（业务核心配置）。 |
-| `ai-knowledge-assistant/pnpm-workspace.yaml` | pnpm 工作区配置：指定子包目录（`packages/*`），让pnpm识别并管理多包依赖。 |
+| 文件路径                           | 核心作用                                                                 |
+|-----------------------------------|--------------------------------------------------------------------------|
+| `package.json`                    | 根项目配置：<br>1. 定义 `workspaces` 管理子包（frontend、backend、shared）；<br>2. 提供启动脚本（并行/单独启动前后端）；<br>3. 指定 `pnpm` 包管理器版本。 |
+| `tsconfig.json`                   | 全局 TypeScript 配置：<br>1. 启用严格模式（`strict: true`）；<br>2. 统一编译目标（ES2020）、模块解析规则；<br>3. 排除 `node_modules`/`dist` 目录。 |
+| `.env`                            | 全局环境变量：<br>1. 配置后端服务端口（`PORT=3000`）；<br>2. 配置豆包API密钥/基础地址（业务核心配置）。 |
+| `pnpm-workspace.yaml`              | pnpm 工作区配置：指定子包目录（`packages/*`），让pnpm识别并管理多包依赖。 |
 
 ## 二、shared 共享包（@ai-ka/shared）
 
@@ -56,23 +56,50 @@ cofco AI 智能知识库助手，一个AI知识库问答系统。
 | 文件路径                          | 核心作用                                                                 |
 |-----------------------------------|--------------------------------------------------------------------------|
 | `src/main.ts`                     | Vue应用入口：<br>1. 创建App实例；<br>2. 集成Pinia（状态管理）、VueRouter（路由）；<br>3. 挂载到 `#app` 节点。 |
-| `src/router/index.ts`             | 路由配置：<br>1. 定义两个核心路由（文档上传页 `/upload`、智能对话页 `/chat`）；<br>2. 配置路由模式/基础路径。 |
+| `src/router/index.ts`             | 路由配置：<br>1. 定义核心路由（文档上传页、智能对话页、知识库管理等）；<br>2. 配置路由模式/基础路径。 |
 | `src/store/index.ts`              | Pinia 状态管理：<br>1. 创建根Store；<br>2. 定义基础状态（如会话列表、上传文件列表）；<br>3. 提供增删改查的action。 |
+| `src/store/modules/knowledgeBase.ts` | 知识库状态管理模块 |
+| `src/store/modules/document.ts`   | 文档状态管理模块 |
 | `src/utils/request.ts`            | Axios 封装：<br>1. 创建Axios实例（配置基础URL/超时时间）；<br>2. 请求拦截器（添加token/统一请求格式）；<br>3. 响应拦截器（统一解析/错误处理）；<br>4. 导出请求方法（get/post等）。 |
 | `src/App.vue`                     | 根组件：<br>1. 包含导航栏（切换上传/对话页）；<br>2. 提供路由出口（`<router-view>`）；<br>3. 基础布局样式。 |
-| `src/views/`                      | 页面组件目录：存放 `Upload.vue`（文档上传）、`Chat.vue`（智能对话）核心页面。 |
-| `src/components/`                 | 公共组件目录：存放可复用组件（如上传按钮、聊天消息气泡）。 |
+| `src/views/`                      | 页面组件目录：<br>1. `DocumentUpload.vue`（文档上传）；<br>2. `IntelligentChat.vue`（智能对话）；<br>3. `KnowledgeBaseForm.vue`（知识库表单）；<br>4. `KnowledgeBaseList.vue`（知识库列表）；<br>5. `DocumentManager.vue`（文档管理）。 |
+| `src/components/`                 | 公共组件目录：存放可复用组件（如上传按钮、聊天消息气泡、PDF预览）。 |
 | `src/api/`                        | API接口目录：封装前后端交互的接口函数（基于request.ts）。 |
 
 ## 四、backend 后端包（@ai-ka/backend）
 
 基于 Express + TypeScript 的后端服务，目录路径：`packages/backend/`
 
+### 基础配置文件
+
 | 文件路径                          | 核心作用                                                                 |
 |-----------------------------------|--------------------------------------------------------------------------|
 | `package.json`                    | 后端项目配置：<br>1. 脚本：`dev`（ts-node启动开发服务）、`build`（TS编译）、`start`（启动编译后代码）；<br>2. 依赖：Express（Web框架）、cors（跨域）、dotenv（环境变量）；<br>3. 开发依赖：TS、ts-node、Express/cors/Node类型声明。 |
 | `tsconfig.json`                   | 后端TS配置：<br>1. 启用严格模式；<br>2. 配置编译目标/模块解析；<br>3. 路径别名（`@` 指向 `src`）；<br>4. 排除编译输出/第三方依赖。 |
-| `src/index.ts`                    | 后端入口：<br>1. 加载根目录 `.env` 环境变量；<br>2. 配置中间件（CORS、JSON解析、URL编码）；<br>3. 提供健康检查接口（`/api/health`）；<br>4. 启动HTTP服务（监听3000端口）。 |
+| `src/index.ts`                    | 后端入口：<br>1. 加载根目录 `.env` 环境变量；<br>2. 配置中间件（CORS、JSON解析、URL编码）；<br>3. 注册路由（chat、document、file、history）；<br>4. 提供健康检查接口（`/api/health`）；<br>5. 启动HTTP服务（监听3000端口）。 |
+| `src/config/index.ts`             | 配置管理：统一管理所有配置项（API密钥、端点、超时等），添加配置项缺失校验。 |
+| `vitest.config.ts`               | Vitest 测试配置。 |
+
+### 核心业务文件（后端服务层）
+
+| 文件路径                          | 核心作用                                                                 |
+|-----------------------------------|--------------------------------------------------------------------------|
+| `src/routes/chat.route.ts`        | 聊天路由：非流式对话 `/chat/normal`、流式对话 `/chat/stream`。 |
+| `src/routes/document.route.ts`   | 文档路由：上传 `/documents/upload`、列表 `/documents`、详情 `/documents/:id`、删除 `/documents/:id`、知识库关联。 |
+| `src/routes/file.route.ts`        | 文件路由：文件上传解析 `/file/upload`。 |
+| `src/routes/history.route.ts`     | 历史记录路由：查询、清空对话历史。 |
+| `src/services/llm.service.ts`     | LLM 服务：调用豆包对话 API，支持非流式/流式输出、自动重试、超时控制。 |
+| `src/services/embedding.service.ts` | Embedding 服务：文本向量化、向量存储与检索（VectorStore 类）。 |
+| `src/services/retrieval.service.ts` | 检索服务：向量相似度检索 `searchTopK`。 |
+| `src/services/chat.service.ts`   | 聊天服务：RAG 核心流程、Prompt 构造。 |
+| `src/services/file.service.ts`    | 文件解析服务：PDF/Word 解析、文本提取。 |
+| `src/services/document.service.ts` | 文档管理服务：CRUD 文档记录、关联知识库。 |
+| `src/services/history.service.ts` | 历史记录服务：对话历史存储与查询。 |
+| `src/services/prompt.service.ts`  | Prompt 服务：Prompt 模板管理。 |
+| `src/utils/similarity.ts`         | 相似度计算：余弦相似度计算工具函数。 |
+| `src/utils/file.util.ts`          | 文件工具：文件名编码修正、文件清理等。 |
+| `src/utils/streamResponse.ts`     | 流式响应工具：Express 流式响应封装。 |
+| `src/types/*.ts`                  | 类型定义：config、document、embedding、file、history 等类型。 |
 
 ## 核心协作关系
 
@@ -254,6 +281,42 @@ packages/frontend/src/views/KnowledgeBaseForm.vue
 - 上传文档
 - 字段映射配置
 
+### 4. 文档上传页面 (`DocumentUpload.vue`)
+
+```
+packages/frontend/src/views/DocumentUpload.vue
+```
+
+**功能：**
+
+- 文件上传组件集成
+- PDF 预览组件集成
+- 上传进度显示
+
+### 5. PDF 预览组件 (`PdfPreview.vue`)
+
+```
+packages/frontend/src/components/PdfPreview.vue
+```
+
+**功能：**
+
+- PDF 文件预览
+- 页码导航
+- 缩放控制
+
+### 6. 文件上传组件 (`FileUpload.vue`)
+
+```
+packages/frontend/src/components/FileUpload.vue
+```
+
+**功能：**
+
+- 拖拽上传
+- 文件类型校验
+- 上传进度显示
+
 ---
 
 ## 九、环境配置
@@ -262,7 +325,7 @@ packages/frontend/src/views/KnowledgeBaseForm.vue
 
 ```bash
 # 豆包 LLM（必需）
-DOUBAO_API_KEY=279dc1d3-2003-4aa2-baea-5ceda434f97e
+DOUBAO_API_KEY=279dc1d3-2003-4aa2-baea-xxx
 
 # SiliconFlow Embedding（可选，免费）
 SILICONFLOW_API_KEY=sk-exhxrlinysleblmmejzrhqaikgjgvervyhaosjrvzaxjmxpp
@@ -290,12 +353,36 @@ if (config.siliconFlow?.apiKey) {
 
 ## 十、API 接口
 
+### 聊天接口
+
 | 接口 | 方法 | 说明 |
 |------|------|------|
-| `/api/chat` | POST | 非流式文档问答 |
+| `/api/chat/normal` | POST | 非流式文档问答 |
 | `/api/chat/stream` | POST | 流式文档问答 |
-| `/api/document/upload` | POST | 上传文档 |
-| `/api/knowledge-base/*` | CRUD | 知识库管理 |
+
+### 文档接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/documents/upload` | POST | 上传文档到知识库 |
+| `/api/documents` | GET | 获取文档列表 |
+| `/api/documents/:id` | GET | 获取文档详情 |
+| `/api/documents/:id` | DELETE | 删除文档 |
+| `/api/documents/:id/knowledgebases` | POST | 添加文档到知识库 |
+| `/api/documents/:id/knowledgebases/:kbId` | DELETE | 从知识库移除文档 |
+
+### 文件接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/file/upload` | POST | 上传并解析文件 |
+
+### 历史记录接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/history` | GET | 获取对话历史 |
+| `/api/history` | DELETE | 清空对话历史 |
 
 ---
 

@@ -1,6 +1,6 @@
 ## 豆包-API Key
 - 名称： doubao-api-key-20260329184551
-- API Key：： 279dc1d3-2003-4aa2-baea-5ceda434f97e
+- API Key：： 279dxxx-xxx-xxx-xxx-xxx
 - Embedding向量化接口的正确地址为：https://ark.cn-beijing.volces.com/api/v3/embeddings4
 
 - 接入模型： Doubao-Seed-2.0-Code
@@ -13,7 +13,7 @@
 ```bash
 curl https://ark.cn-beijing.volces.com/api/v3/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer 279dc1d3-2003-4aa2-baea-5ceda434f97e" \
+  -H "Authorization: Bearer 279dxxx-xxx-xxx-xxx-xxx" \
   -d $'{
     "model": "doubao-seed-2-0-code-preview-260215",
     "messages": [
@@ -50,7 +50,7 @@ client = OpenAI(
     # 此为默认路径，您可根据业务所在地域进行配置
     base_url="https://ark.cn-beijing.volces.com/api/v3",
     # 从环境变量中获取您的 API Key。此为默认方式，您可根据需要进行修改
-    api_key="279dc1d3-2003-4aa2-baea-5ceda434f97e",
+    api_key="279dxxx-xxx-xxx-xxx-xxx",
 )
 response = client.chat.completions.create(
     # 指定您创建的方舟推理接入点 ID，此处已帮您修改为您的推理接入点 ID
@@ -88,7 +88,7 @@ client = Ark(
     # 此为默认路径，您可根据业务所在地域进行配置
     base_url="https://ark.cn-beijing.volces.com/api/v3",
     # 从环境变量中获取您的 API Key。此为默认方式，您可根据需要进行修改
-    api_key="279dc1d3-2003-4aa2-baea-5ceda434f97e",
+    api_key="279dxxx-xxx-xxx-xxx-xxx",
 )
 
 response = client.chat.completions.create(

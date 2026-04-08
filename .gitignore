@@ -1,7 +1,7 @@
 doc/*
 .my-rules/
 .cursor/*
-
+config/*
 scripts/
 node_modules/
 .env
