@@ -118,7 +118,11 @@
 
         <div class="document-section">
           <div class="upload-area">
-            <FileUpload @success="handleUploadSuccess" @error="handleUploadError" />
+            <FileUpload
+              :knowledge-base-ids="currentKbId ? [currentKbId] : []"
+              @success="handleUploadSuccess"
+              @error="handleUploadError"
+            />
           </div>
 
           <div class="document-list-area">

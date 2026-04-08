@@ -204,6 +204,10 @@ export async function chatCompletionStream(
     return;
   }
 
+  console.group('流式对话服务 - chatCompletionStream （调用豆包流式对话 API，逐块处理响应）');
+  console.log('prompt', prompt);
+  
+
   try {
     // 先调用非流式获取完整回答
     const result = await chatCompletion(prompt);
@@ -211,6 +215,8 @@ export async function chatCompletionStream(
       onError(result.error || '获取回答失败');
       return;
     }
+
+    console.log('chatCompletion 结果: ', result);
 
     // 模拟流式返回（逐字返回）
     const answer = result.data.answer;
@@ -225,4 +231,9 @@ export async function chatCompletionStream(
     const errorMessage = err instanceof Error ? err.message : String(err);
     onError(`流式请求失败: ${errorMessage}`);
   }
+  finally {
+    console.log('流式对话服务 - chatCompletionStream 结束');
+    console.groupEnd();
+  }
+
 }

@@ -68,8 +68,8 @@ import { ElMessage } from 'element-plus';
 import { Loading, WarningFilled, ArrowLeft, ArrowRight, ZoomIn, ZoomOut } from '@element-plus/icons-vue';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// 设置 Worker（使用 CDN）
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+// 设置 Worker（使用本地缓存，避免 CDN 不稳定）
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/lib/pdfjs-dist/pdf.worker.min.mjs';
 
 interface Props {
   /** PDF 文件 URL（相对路径或绝对路径） */
@@ -126,7 +126,7 @@ async function loadPdf() {
 
     const loadingTask = pdfjsLib.getDocument({
       url: pdfUrl,
-      cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/cmaps/`,
+      cMapUrl: '/lib/pdfjs-dist/cmaps/',
       cMapPacked: true
     });
 

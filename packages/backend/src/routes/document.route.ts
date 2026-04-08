@@ -75,11 +75,22 @@ router.post(
       }
 
       // 解析文件内容
+      console.log('\n========== [测试] 文件解析开始 ==========');
+      console.log(`文件名: ${req.file.originalname}`);
+      console.log(`MIME 类型: ${req.file.mimetype}`);
+      console.log(`文件大小: ${(req.file.size / 1024).toFixed(2)} KB`);
+      
       const parseResult = await fileService.parseFile(
         req.file.buffer,
         req.file.mimetype,
         req.file.originalname
       );
+      
+      console.log('\n----- 解析结果文本内容 -----');
+      console.log(parseResult.text);
+      console.log('\n----- 解析结果文本长度 -----');
+      console.log(`总字符数: ${parseResult.text.length}`);
+      console.log('========== [测试] 文件解析结束 ==========\n');
 
       // 创建文档记录
       const uploadedBy = req.body.uploadedBy || 'anonymous';

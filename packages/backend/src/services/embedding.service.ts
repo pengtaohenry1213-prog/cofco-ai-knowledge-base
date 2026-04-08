@@ -5,12 +5,11 @@ import {
   ChunkOptions
 } from '../types/embedding.types';
 import { KnowledgeBaseVectorStore, VectorItem as KbVectorItem } from '../types/document.types';
-import { config } from '../config';
+import { cosineSimilarity } from '../utils/similarity'; // 余弦相似度计算函数
+import { config } from '../config'; // 配置文件 - 包含 SiliconFlow 和豆包的配置
 
 /** SiliconFlow Embedding API 端点 */
 const EMBEDDING_ENDPOINT = '/embeddings';
-/** SiliconFlow Embedding 模型名称 */
-const EMBEDDING_MODEL = 'BAAI/bge-large-zh-v1.5';
 
 /** 默认分块参数 */
 const DEFAULT_CHUNK_SIZE = 500;
@@ -45,9 +44,20 @@ function getEmbeddingConfig() {
 /**
  * 将文本按句子拆分，返回句子数组
  * 句子分隔符：中英文句号、感叹号、问号
+ * 
+ * @param text - 待拆分文本
+ * @returns 句子数组
+ * 
+ * @example
+ * ```typescript
+ * const sentences = splitIntoSentences('这是一个句子。这是一个句子！这是一个句子？');
+ * console.log(sentences); // ['这是一个句子。', '这是一个句子！', '这是一个句子？']
+ * ```
  */
 function splitIntoSentences(text: string): string[] {
   const sentences: string[] = [];
+
+  // 句子分隔符：中英文句号、感叹号、问号
   const regex = /[^.!?。！？]+(?:[.!?。！？]+|$)/g;
   let match: RegExpExecArray | null;
 
@@ -68,12 +78,12 @@ function splitIntoSentences(text: string): string[] {
 /**
  * 将文本按句子边界拆分为固定大小的分块
  * - 每个分块约 chunkSize 字
- * - 相邻分块重叠 overlap 字
+ * - 相邻分块重叠 overlap 字, 👉 overlap 解决的是“上下文连续性”，不是“句子完整性”
  * - 不在句子中间截断
  *
  * @param text - 待分块文本
  * @param chunkSize - 每块字数（默认 500）
- * @param overlap - 相邻块重叠字数（默认 100）
+ * @param overlap - 相邻块重叠字数（默认 100）, overlap 解决的是“上下文连续性”，不是“句子完整性”
  * @returns 分块数组
  */
 export function splitIntoChunks(
@@ -85,6 +95,14 @@ export function splitIntoChunks(
     return [];
   }
 
+  // 从“上一个 chunk 的结尾”取 100 字，拼到下一个 chunk 的开头
+  // chunks: []
+  //   chunk1: [句子1 + 句子2 + 句子3]
+  //   chunk2: [chunk1最后100字 + 句子4 + 句子5]
+  //   ...
+  // ]
+
+  // 将文本按句子拆分，返回句子数组. 句子分隔符：中英文句号、感叹号、问号
   const sentences = splitIntoSentences(text);
   const chunks: TextChunk[] = [];
   let currentChunk = '';
@@ -162,9 +180,10 @@ export async function createEmbedding(text: string): Promise<EmbeddingResult> {
   }
 
   const embeddingConfig = getEmbeddingConfig();
-  console.log(`[Embedding] Provider: ${embeddingConfig.provider}`);
-  console.log(`[Embedding] 请求 endpoint: ${embeddingConfig.endpoint}`);
-  console.log(`[Embedding] 模型: ${embeddingConfig.model}`);
+  console.log('--------------------- createEmbedding --------------------')
+  console.log(`[Embedding] Provider: ${embeddingConfig.provider}`); // SiliconFlow
+  console.log(`[Embedding] 请求 endpoint: ${embeddingConfig.endpoint}`); // https://api.siliconflow.cn/v1/embeddings
+  console.log(`[Embedding] 模型: ${embeddingConfig.model}`); // BAAI/bge-large-zh-v1.5
   console.log(`[Embedding] 文本长度: ${text.length}`);
 
   let lastError: Error | null = null;
@@ -281,6 +300,8 @@ export class VectorStore {
         return { success: false, error: result.error };
       }
 
+      
+
       const chunkId = `kb-${knowledgeBaseId}-chunk-${timestamp}-${i}`;
       chunkIds.push(chunkId);
 
@@ -290,10 +311,10 @@ export class VectorStore {
         embedding: result.data!
       };
 
-      // 按知识库 ID 存储
-      const kbVectors = this.kbStores.get(knowledgeBaseId) || [];
-      kbVectors.push(vectorItem);
-      this.kbStores.set(knowledgeBaseId, kbVectors);
+      // 按知识库 ID 隔离，进程级存储
+      const kbVectors = this.kbStores.get(knowledgeBaseId) || []; // 根据 knowledgeBaseId 获取知识库的向量
+      kbVectors.push(vectorItem); // 将向量添加到知识库中
+      this.kbStores.set(knowledgeBaseId, kbVectors); // 将知识库的向量存储到内存中
     }
 
     console.log(`[VectorStore] 添加到知识库 ${knowledgeBaseId}: ${chunkIds.length} 个分块`);
@@ -327,30 +348,32 @@ export class VectorStore {
     knowledgeBaseId: string,
     topK: number = 5
   ): Promise<VectorItem[]> {
-    const kbVectors = this.kbStores.get(knowledgeBaseId) || [];
-    if (kbVectors.length === 0) {
-      console.log(`[VectorStore] 知识库 ${knowledgeBaseId} 没有向量数据`);
-      return [];
-    }
 
-    // 生成问题的 embedding
-    const questionEmbedding = await createEmbedding(question);
-    if (!questionEmbedding.success || !questionEmbedding.data) {
-      console.log(`[VectorStore] 问题 embedding 失败: ${questionEmbedding.error}`);
-      return [];
-    }
+    /*
+      相似度计算需要两个向量
+      * 1. 上传时：文档文本 → createEmbedding → 向量，存入内存 (this.kbStores) . 上传时：存入的是文档块的向量
+      * 2. 提问时：问题文本 → createEmbedding → 向量，用于检索 (questionEmbedding.data). 提问时：需要将问题也转成向量
+      两个向量才能计算相似度：question_vector 和 chunk_vector
+    */
+
+    // 根据 knowledgeBaseId 获取知识库的向量
+    const kbVectors = this.kbStores.get(knowledgeBaseId) || []; // 根据 knowledgeBaseId 获取知识库的向量
 
     // 计算相似度并排序
     const similarities = kbVectors.map((v) => ({
       vector: v,
-      similarity: this.cosineSimilarity(questionEmbedding.data!, v.embedding)
+      // cosineSimilarity 计算两个向量的余弦相似度, 这里参数分别是：问题embedding 和 knowledgeBaseId 对应的向量
+      similarity: cosineSimilarity(questionEmbedding.data!, v.embedding)
     }));
 
+    // 按照相似度排序
     similarities.sort((a, b) => b.similarity - a.similarity);
+
+    // 从相似度最高的开始，返回 topK 个向量
     const results = similarities.slice(0, topK).map((s) => s.vector);
 
     console.log(`[VectorStore] 查询知识库 ${knowledgeBaseId}: 返回 ${results.length} 个结果`);
-    return results;
+    return results; // 返回相似度最高的 topK 个向量
   }
 
   /**
@@ -377,31 +400,11 @@ export class VectorStore {
 
     const similarities = allVectors.map((v) => ({
       vector: v,
-      similarity: this.cosineSimilarity(questionEmbedding.data!, v.embedding)
+      similarity: cosineSimilarity(questionEmbedding.data!, v.embedding)
     }));
 
     similarities.sort((a, b) => b.similarity - a.similarity);
     return similarities.slice(0, topK).map((s) => s.vector);
-  }
-
-  /**
-   * 计算余弦相似度
-   */
-  private cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length) return 0;
-
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-
-    for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
-    }
-
-    if (normA === 0 || normB === 0) return 0;
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
 
   /**

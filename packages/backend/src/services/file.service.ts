@@ -4,13 +4,52 @@ import { createWorker } from 'tesseract.js';
 import fs from 'fs-extra';
 import path from 'path';
 import { execSync } from 'child_process';
-import { FileParseResult, FILE_ERROR_MESSAGES } from '../types/file.types';
+import {
+  FileParseResult,
+  FILE_ERROR_MESSAGES,
+  MAX_UPLOAD_DIR_FILES,
+  MAX_UPLOAD_DIR_SIZE_MB
+} from '../types/file.types';
 
 /** 设置 pdfjs-dist Worker（Node.js 环境） */
 pdfjsLib.GlobalWorkerOptions.workerSrc = path.join(
   process.cwd(),
   'node_modules/pdfjs-dist/build/pdf.worker.js'
 );
+
+/** 预初始化 pdfjs-dist Worker，确保首次解析时已就绪 */
+let pdfJsInitialized = false;
+let pdfJsInitPromise: Promise<void> | null = null;
+
+function initPdfJsWorker(): Promise<void> {
+  if (pdfJsInitialized) {
+    return Promise.resolve();
+  }
+  if (pdfJsInitPromise) {
+    return pdfJsInitPromise;
+  }
+
+  pdfJsInitPromise = (async () => {
+    try {
+      // 通过加载一个空 PDF 来预热 Worker
+      const emptyPdf = new Uint8Array([
+        0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, // %PDF-1.4
+        0x0A, 0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A,       // %...comment
+        0x0A, 0x25, 0x25, 0x45, 0x4F, 0x46, 0x0A        // %%EOF
+      ]);
+      await pdfjsLib.getDocument(emptyPdf).promise;
+      pdfJsInitialized = true;
+    } catch {
+      // 即使预热失败也不阻塞，后续请求会再次尝试
+      pdfJsInitialized = true;
+    }
+  })();
+
+  return pdfJsInitPromise;
+}
+
+// 启动 Worker 预初始化（异步，不阻塞模块加载）
+initPdfJsWorker();
 
 /** PDF 文件存储目录 */
 const PDF_UPLOAD_DIR = path.join(process.cwd(), 'packages/backend/uploads/pdfs');
@@ -25,6 +64,72 @@ const IMAGEMAGICK_CONVERT = '/opt/homebrew/bin/convert';
 function ensureUploadDir() {
   if (!fs.existsSync(PDF_UPLOAD_DIR)) {
     fs.mkdirSync(PDF_UPLOAD_DIR, { recursive: true });
+  }
+}
+
+/**
+ * 检查上传目录状态，必要时清理旧文件
+ * 按文件修改时间排序，删除最旧的文件直到满足限制
+ */
+async function cleanupOldFiles(): Promise<void> {
+  if (!fs.existsSync(PDF_UPLOAD_DIR)) return;
+
+  const files = await fs.readdir(PDF_UPLOAD_DIR);
+  if (files.length <= MAX_UPLOAD_DIR_FILES) return;
+
+  const fileInfos = await Promise.all(
+    files.map(async (file) => {
+      const filePath = path.join(PDF_UPLOAD_DIR, file);
+      const stats = await fs.stat(filePath);
+      return { file, filePath, mtime: stats.mtime.getTime() };
+    })
+  );
+
+  // 按修改时间升序（最旧的在前）
+  fileInfos.sort((a, b) => a.mtime - b.mtime);
+
+  // 删除最旧的文件，直到数量达到限制
+  const filesToDelete = fileInfos.slice(0, files.length - MAX_UPLOAD_DIR_FILES);
+  for (const { filePath } of filesToDelete) {
+    await fs.remove(filePath);
+    console.log(`[FileService] 已清理旧文件: ${path.basename(filePath)}`);
+  }
+}
+
+/**
+ * 检查目录总大小，必要时清理
+ */
+async function cleanupBySize(): Promise<void> {
+  if (!fs.existsSync(PDF_UPLOAD_DIR)) return;
+
+  const maxBytes = MAX_UPLOAD_DIR_SIZE_MB * 1024 * 1024;
+  const files = await fs.readdir(PDF_UPLOAD_DIR);
+  let totalSize = 0;
+
+  for (const file of files) {
+    const filePath = path.join(PDF_UPLOAD_DIR, file);
+    const stats = await fs.stat(filePath);
+    totalSize += stats.size;
+  }
+
+  if (totalSize <= maxBytes) return;
+
+  // 按修改时间升序排序，删除最旧的文件直到大小满足限制
+  const fileInfos = await Promise.all(
+    files.map(async (file) => {
+      const filePath = path.join(PDF_UPLOAD_DIR, file);
+      const stats = await fs.stat(filePath);
+      return { file, filePath, mtime: stats.mtime.getTime(), size: stats.size };
+    })
+  );
+  fileInfos.sort((a, b) => a.mtime - b.mtime);
+
+  for (const { filePath } of fileInfos) {
+    if (totalSize <= maxBytes) break;
+    const stats = await fs.stat(filePath);
+    await fs.remove(filePath);
+    totalSize -= stats.size;
+    console.log(`[FileService] 已按大小清理文件: ${path.basename(filePath)}`);
   }
 }
 
@@ -81,6 +186,13 @@ export class FileService {
    */
   private async parsePdf(buffer: Buffer, filename: string): Promise<{ text: string; pdfPath: string }> {
     ensureUploadDir();
+
+    // 等待 Worker 初始化完成，避免竞态条件
+    await initPdfJsWorker();
+
+    // 上传前检查并清理（按数量和大小）
+    await cleanupOldFiles();
+    await cleanupBySize();
 
     const timestamp = Date.now();
     const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');

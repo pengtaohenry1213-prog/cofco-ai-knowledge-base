@@ -38,10 +38,17 @@ export const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt'];
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
+/** 上传目录最大文件数量 */
+export const MAX_UPLOAD_DIR_FILES = 100;
+
+/** 上传目录最大总大小 (MB) */
+export const MAX_UPLOAD_DIR_SIZE_MB = 500;
+
 export const FILE_ERROR_MESSAGES = {
   NO_FILE: '未上传文件',
   FILE_TOO_LARGE: '文件大小超过限制',
   UNSUPPORTED_TYPE: '不支持的文件类型',
   PARSE_FAILED: '文件解析失败',
-  EMPTY_FILE: '文件内容为空'
+  EMPTY_FILE: '文件内容为空',
+  DIR_FULL: '上传目录已满，请稍后再试'
 } as const;

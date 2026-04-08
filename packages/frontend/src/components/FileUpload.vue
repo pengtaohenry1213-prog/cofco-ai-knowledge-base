@@ -53,6 +53,17 @@ import { ElIcon } from 'element-plus';
 import { Upload, Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue';
 import type { UploadErrorType } from '@/api/file';
 import { uploadFile } from '@/api/file';
+import { useDocumentStore } from '@/store/modules/document';
+
+const props = withDefaults(
+  defineProps<{
+    /** 非空时走 /documents/upload，写入文档列表并关联知识库、建向量 */
+    knowledgeBaseIds?: string[];
+  }>(),
+  { knowledgeBaseIds: () => [] }
+);
+
+const documentStore = useDocumentStore();
 
 /** 允许的文件类型 */
 const ALLOWED_TYPES = ['.pdf', '.docx', '.txt'];
@@ -84,8 +95,8 @@ const state = reactive<UploadState>({
 
 /** emits */
 const emit = defineEmits<{
-  (e: 'success', data: { filename: string; content: string; html?: string }): void;
-  (e: 'error', error: { type: UploadErrorType; message: string }): void;
+  success: (data: { filename: string; content: string; html?: string; pdfPath?: string; isPdf?: boolean }) => void;
+  error: (error: { type: UploadErrorType; message: string }) => void;
 }>();
 
 /**
@@ -168,15 +179,47 @@ async function handleFile(file: File) {
   state.error = undefined;
 
   try {
-    const result = await uploadFile(file, {
-      onProgress: (percent) => {
-        state.progress = percent;
+    if (props.knowledgeBaseIds.length > 0) {
+      state.progress = 30;
+      const item = await documentStore.uploadDocument(file, props.knowledgeBaseIds);
+      if (!item) {
+        throw { type: 'server' as UploadErrorType, message: '上传失败，请重试' };
       }
-    });
+      state.status = 'success';
+      state.progress = 100;
+      emit('success', {
+        filename: item.name,
+        content: '',
+        html: undefined,
+        pdfPath: undefined,
+        isPdf: item.mimeType === 'application/pdf'
+      });
+    } else {
+      const result = await uploadFile(file, {
+        onProgress: (percent) => {
+          state.progress = percent;
+        }
+      });
 
-    state.status = 'success';
-    state.progress = 100;
-    emit('success', result);
+      state.status = 'success';
+      state.progress = 100;
+
+      console.log('\n========== [前端测试] 文件上传成功 ==========');
+      console.log(`文件名: ${result.filename}`);
+      console.log(`是否为 PDF: ${result.isPdf}`);
+      console.log(`PDF 路径: ${result.pdfPath || 'N/A'}`);
+      console.log('\n----- 解析文本内容 -----');
+      console.log(result.content);
+      console.log('\n----- 解析文本长度 -----');
+      console.log(`总字符数: ${result.content.length}`);
+      if (result.html) {
+        console.log('\n----- HTML 预览内容 (前500字符) -----');
+        console.log(result.html.substring(0, 500) + (result.html.length > 500 ? '...' : ''));
+      }
+      console.log('========== [前端测试] 结束 ==========\n');
+
+      emit('success', result);
+    }
   } catch (error: unknown) {
     state.status = 'error';
     const err = error as { type: UploadErrorType; message: string };

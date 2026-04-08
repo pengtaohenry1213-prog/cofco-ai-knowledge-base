@@ -101,6 +101,19 @@ router.post(
 
       // 设置响应头，确保前端正确解析中文
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      
+      // 测试输出：打印解析结果
+      console.log('\n========== [文件上传测试] 解析结果 ==========');
+      console.log(`文件名: ${result.filename}`);
+      console.log(`是否为 PDF: ${result.isPdf}`);
+      console.log(`PDF 路径: ${result.pdfPath || 'N/A'}`);
+      console.log(`原始大小: ${(result.originalSize / 1024).toFixed(2)} KB`);
+      console.log('\n----- 解析文本内容 -----');
+      console.log(result.text);
+      console.log('\n----- 解析文本长度 -----');
+      console.log(`总字符数: ${result.text.length}`);
+      console.log('========== [文件上传测试] 结束 ==========\n');
+      
       res.json({
         success: true,
         data: {

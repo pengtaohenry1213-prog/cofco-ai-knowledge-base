@@ -127,9 +127,16 @@ const chatHistory = ref<ChatHistory[]>([]);
 const currentChatIndex = ref(-1);
 const selectedKbId = ref<string>('');
 
-// 可用的知识库列表（仅显示本地文档库）
+// 可用的知识库列表（仅显示本地文档库；文档数来自后端文档列表，避免 store 未维护 documentCount 时一直为 0）
 const availableKbs = computed(() => {
-  return kbStore.list.filter((kb) => kb.kind === 'local');
+  return kbStore.list
+    .filter((kb) => kb.kind === 'local')
+    .map((kb) => ({
+      ...kb,
+      documentCount: documentStore.documents.filter((doc) =>
+        doc.knowledgeBaseIds.includes(kb.id)
+      ).length
+    }));
 });
 
 // 当前选中的知识库名称
@@ -152,17 +159,15 @@ const hasActiveDocument = computed(() => {
 });
 
 onMounted(async () => {
-  // 加载知识库列表（不需要等待）
+  // 加载知识库列表
+  await kbStore.fetchKnowledgeBases();
   // 加载文档列表
   await documentStore.fetchDocuments();
 });
 
-// 处理知识库选择变化
-async function handleKbChange(kbId: string) {
-  if (kbId) {
-    // 加载该知识库的文档
-    await documentStore.fetchDocuments(kbId);
-  }
+// 处理知识库选择变化（拉全量文档列表，保证下拉「各库文档数」与 hasActiveDocument 一致）
+async function handleKbChange() {
+  await documentStore.fetchDocuments();
 }
 
 const scrollToBottom = async () => {
@@ -213,6 +218,16 @@ const handleSend = async () => {
     requestParams.documentText = documentStore.documentText;
   }
 
+  /*
+    1. 前端 IntelligentChat.vue 调用 streamPost，请求 /api/chat/stream
+    2. 后端路由 chat.route.ts 的 /stream 端点：
+      - 执行向量检索 searchTopK
+      - 构建 Prompt buildDocumentQaPrompt
+      - 调用 chatCompletionStream（第153行）
+    3. LLM 服务 llm.service.ts：
+      - chatCompletionStream（第197行）：内部先调用 chatCompletion 获取完整回答，再模拟流式逐字返回
+      - chatCompletion（第80行）：实际调用豆包 API
+  */
   streamPost(
     requestParams,
     {

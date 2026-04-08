@@ -10,6 +10,7 @@ import { chatCompletionStream } from '../services/llm.service';
 import { setupStreamResponse, sendStreamError } from '../utils/streamResponse';
 
 /** TopK 默认数量 */
+// 计算问题 embedding 与内存中所有文本块 embedding 的相似度，筛选 Top5 高相似度文本块；
 const DEFAULT_TOP_K = 5;
 
 /** 聊天请求参数 */
@@ -112,7 +113,7 @@ router.post('/stream', async (req: Request, res: Response) => {
       console.log(`[Chat/Stream] ✓ 使用传入的 documentText，长度=${documentText.length}`);
     } else {
       // 从知识库向量库检索或从所有向量库检索
-      console.log(`[Chat/Stream] 走向量检索模式${knowledgeBaseId ? `，知识库=${knowledgeBaseId}` : '（全库）'}`);
+      console.log(`[Chat/Stream][retrieval.service.ts] 走向量检索模式${knowledgeBaseId ? `，知识库=${knowledgeBaseId}` : '（全库）'}`);
       const retrievalResult = await searchTopK(trimmedQuestion, DEFAULT_TOP_K, knowledgeBaseId);
 
       if (!retrievalResult.success) {
@@ -121,6 +122,8 @@ router.post('/stream', async (req: Request, res: Response) => {
         return;
       }
 
+      // `searchTopK` 返回的是 **文本块数组**（`chunks`），而不是向量本身。
+      // 所以这里需要将文本块数组赋值给 relevantChunks
       relevantChunks = retrievalResult.chunks || [];
       console.log(`[Chat/Stream] 检索到 ${relevantChunks.length} 个相关片段`);
     }
@@ -133,7 +136,7 @@ router.post('/stream', async (req: Request, res: Response) => {
     }
 
     // 2. 拼接 Prompt
-    const contextText = relevantChunks.join('\n\n');
+    const contextText = relevantChunks.join('\n\n'); // ← 将文本块数组拼接成字符串
     const scope: 'full' | 'retrieval' =
       documentText && documentText.trim().length > 0 ? 'full' : 'retrieval';
     
@@ -147,6 +150,7 @@ router.post('/stream', async (req: Request, res: Response) => {
       return;
     }
 
+    // contextText
     const prompt = buildDocumentQaPrompt(trimmedQuestion, contextText);
 
     // 3. 调用流式 LLM 服务

@@ -118,6 +118,12 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
     return true;
   }
 
+  async function fetchKnowledgeBases(): Promise<void> {
+    // 目前使用本地数据，如果有后端 API 可以改为：
+    // const res = await request.get('/knowledgebases');
+    // if (res.data.success) list.value = res.data.data;
+  }
+
   return {
     list,
     filterName,
@@ -128,6 +134,7 @@ export const useKnowledgeBaseStore = defineStore('knowledgeBase', () => {
     getById,
     add,
     update,
-    remove
+    remove,
+    fetchKnowledgeBases
   };
 });
